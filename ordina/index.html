@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Scegli il dominio – SitoComodo</title>
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+:root{--accento:#1D4ED8;--accento-scuro:#1E40AF;--accento-chiaro:#F0F4FF;--bordo:#DEDEDE;--grigio:#F5F5F5;--testo:#1A1A1A;--tenue:#6B6B6B;--errore:#C81E1E;--verde:#0F7B3F}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:var(--testo);background:#FFFFFF}
+a{color:var(--accento)}a:hover{color:var(--accento-scuro)}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accento);outline-offset:2px}
+.solo-lettori{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.marchio{display:inline-flex;align-items:center;gap:8px;min-height:44px;text-decoration:none;color:#111827}
+.marchio>span{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:22px;letter-spacing:-.01em}
+.marchio>span>span{color:#C2410C}
+.marchio:hover{color:#111827}
+
+.testata-tel{display:none}
+.cassa{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100vh}
+.sinistra{display:flex;justify-content:flex-end;padding:48px 64px 40px 40px;border-right:1px solid var(--bordo)}
+.sinistra>.dentro{width:100%;max-width:560px;display:flex;flex-direction:column}
+.destra{background:var(--grigio)}
+.destra>.dentro{max-width:440px;padding:48px 40px 40px 44px;position:sticky;top:0}
+.apri-riepilogo{display:none}
+
+.briciole{list-style:none;margin:22px 0 30px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--tenue)}
+.briciole li+li::before{content:"›";margin-right:6px;color:#9A9A9A}
+.briciole [aria-current]{color:var(--testo);font-weight:600}
+h1{margin:0 0 6px;font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-.01em}
+.sotto{margin:0 0 4px;color:var(--tenue);font-size:14px}
+section{margin-top:30px}
+h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
+.nota-campo{margin:8px 0 0;font-size:13px;color:var(--tenue)}
+
+.campo{position:relative}
+.campo input{width:100%;height:52px;padding:22px 13px 6px;border:1px solid var(--bordo);border-radius:6px;background:#FFFFFF;font-size:16px;-webkit-appearance:none;appearance:none}
+.campo label{position:absolute;left:14px;top:15px;font-size:15px;color:var(--tenue);pointer-events:none;transition:top .12s,font-size .12s}
+.campo input:focus+label,.campo input:not(:placeholder-shown)+label{top:6px;font-size:12px}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:var(--accento);box-shadow:0 0 0 1px var(--accento)}
+[aria-invalid=true]{border-color:var(--errore)!important;box-shadow:0 0 0 1px var(--errore)!important}
+.errore{margin:6px 0 0;font-size:13px;color:var(--errore)}
+
+.primario{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;margin-top:26px;padding:0 20px;border:0;border-radius:6px;background:var(--accento);color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer}
+.primario:hover{background:var(--accento-scuro);color:#FFFFFF}
+.sicuro{margin:12px 0 0;font-size:13px;color:var(--tenue);text-align:center}
+.sicuro svg{vertical-align:-2px;margin-right:6px}
+
+.piede{margin-top:auto;padding-top:40px}
+.piede p{margin:0;padding-top:14px;border-top:1px solid var(--bordo);font-size:12px;color:var(--tenue)}
+
+.prodotto{display:flex;align-items:center;gap:14px}
+.miniatura{position:relative;flex:none;width:64px;height:64px;border:1px solid var(--bordo);border-radius:8px;background:#FDE047}
+.miniatura img{display:block;width:100%;height:100%;border-radius:7px;object-fit:cover}
+.quantita{position:absolute;top:-8px;right:-8px;min-width:21px;height:21px;padding:0 6px;border-radius:11px;background:#666666;color:#FFFFFF;font-size:12px;font-weight:600;line-height:21px;text-align:center}
+.prodotto .descr{flex:1;min-width:0;display:flex;flex-direction:column}
+.prodotto .descr strong{font-weight:600}
+.prodotto .descr span{font-size:13px;color:var(--tenue)}
+.righe{margin:22px 0 0;display:flex;flex-direction:column;gap:8px}
+.righe>div{display:flex;justify-content:space-between;gap:12px}
+.righe dt{min-width:0;overflow-wrap:anywhere}.righe dd{margin:0;white-space:nowrap}
+.righe .tenue{display:block;font-size:13px;color:var(--tenue)}
+.totale{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:18px;font-size:19px;font-weight:600}
+.totale small{font-size:12px;font-weight:400;color:var(--tenue);margin-right:4px}
+.iva{margin:2px 0 0;font-size:13px;color:var(--tenue)}
+.pagato-badge{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#DDF3E4;color:var(--verde);font-size:12px;font-weight:600;vertical-align:middle}
+.dopo{margin-top:28px;padding-top:18px;border-top:1px solid var(--bordo);font-size:13px;color:var(--tenue)}
+.dopo p{margin:0}.dopo p+p{margin-top:8px;font-size:12px}
+
+@media (max-width:999px){
+  .testata-tel{display:flex;justify-content:center;padding:10px 20px;border-bottom:1px solid var(--bordo)}
+  .sinistra .marchio{display:none}
+  .cassa{display:flex;flex-direction:column;min-height:0}
+  .destra{order:-1;border-bottom:1px solid var(--bordo)}
+  .destra>.dentro{position:static;max-width:none;padding:0}
+  .apri-riepilogo{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 20px;border:0;background:var(--grigio);color:var(--accento);font-size:14px;cursor:pointer;text-align:left}
+  .apri-riepilogo .freccia{display:inline-block;margin-left:6px;transition:transform .15s}
+  .apri-riepilogo[aria-expanded=true] .freccia{transform:rotate(180deg)}
+  .apri-riepilogo strong{color:var(--testo);font-size:17px}
+  .corpo-riepilogo{padding:4px 20px 22px}
+  .destra:not(.aperto) .corpo-riepilogo{display:none}
+  .sinistra{justify-content:center;padding:6px 20px 32px;border-right:0}
+  .briciole{margin:18px 0 22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.cerca{display:flex;gap:10px}
+.cerca .campo{flex:1;min-width:0}
+.secondario{flex:none;min-width:88px;height:52px;padding:0 18px;border:1px solid var(--bordo);border-radius:6px;background:var(--grigio);font-size:15px;font-weight:600;cursor:pointer}
+.secondario:hover{background:#EBEBEB}
+.elenco{margin-top:14px;border:1px solid var(--bordo);border-radius:6px;overflow:hidden}
+.opzione{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 14px;background:#FFFFFF;cursor:pointer}
+.opzione+.opzione{border-top:1px solid var(--bordo)}
+.opzione input{position:absolute;opacity:0;width:1px;height:1px}
+.pallino{flex:none;width:18px;height:18px;border:1px solid #B5B5B5;border-radius:50%;background:#FFFFFF}
+.opzione:has(input:checked){background:var(--accento-chiaro);box-shadow:inset 0 0 0 1px var(--accento)}
+.opzione:has(input:checked) .pallino{border:6px solid var(--accento)}
+.opzione:has(input:focus-visible){outline:2px solid var(--accento);outline-offset:-2px}
+.opzione .nome{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.etichetta{padding:1px 8px;border-radius:10px;background:#FFEBC2;color:#7A4B00;font-size:11px;font-weight:600}
+.opzione .stato{flex:none;font-size:14px;font-weight:600}
+.opzione.libero .stato{color:var(--verde)}
+.opzione.preso,.opzione.attesa{cursor:default;color:#8A8A8A}
+.opzione.preso .pallino,.opzione.attesa .pallino{background:var(--grigio);border-color:#D4D4D4}
+.opzione.preso .nome{font-weight:500;text-decoration:line-through;text-decoration-color:#B5B5B5}
+.opzione.attesa .stato,.opzione.preso .stato{font-weight:500}
+@media (max-width:999px){.cerca{gap:8px}.secondario{min-width:0}}
+</style>
+</head>
+<body>
+<header class="testata-tel"><a class="marchio" href="../"><svg width="44" height="32" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a></header>
+<div class="cassa">
+<main class="sinistra"><div class="dentro">
+<a class="marchio" href="../"><svg width="44" height="32" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
+<nav aria-label="Passaggi dell'ordine"><ol class="briciole">
+<li aria-current="step">Dominio</li>
+<li>Pagamento</li>
+<li>Il tuo sito</li>
+</ol></nav>
+<h1>Scegli il dominio del tuo sito</h1>
+<p class="sotto">Un dominio .it, .com o .eu è gratis per il primo anno e viene registrato a tuo nome.</p>
+
+<form id="cassa" novalidate>
+<section aria-labelledby="t-dominio">
+<h2 id="t-dominio">Dominio</h2>
+<div class="cerca">
+<div class="campo"><input id="cerca" type="text" placeholder=" " autocomplete="organization" autocapitalize="words" enterkeyhint="search" maxlength="80" aria-describedby="nota-cerca"><label for="cerca">Nome della tua attività</label></div>
+<button type="button" id="bottone-cerca" class="secondario">Cerca</button>
+</div>
+<p class="nota-campo" id="nota-cerca">Es. «Pizzeria da Mario»: cerchiamo pizzeriadamario.it, .com ed .eu.</p>
+<div class="elenco" id="risultati" role="radiogroup" aria-labelledby="t-dominio" hidden></div>
+<p class="errore" id="errore-dominio" hidden>Scegli un dominio libero per continuare.</p>
+</section>
+
+<section aria-labelledby="t-contatto">
+<h2 id="t-contatto">Contatto</h2>
+<div class="campo"><input id="email" type="email" placeholder=" " autocomplete="email" inputmode="email" required aria-describedby="nota-email"><label for="email">Email</label></div>
+<p class="errore" id="errore-email" hidden>Scrivi un'email valida, es. mario@gmail.com</p>
+<p class="nota-campo" id="nota-email">Qui ti mandiamo la ricevuta e, a sito pronto, tutte le credenziali.</p>
+</section>
+
+<button type="submit" class="primario" id="continua">Continua al pagamento</button>
+<p class="sicuro"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="11" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Pagamento sicuro con carta, gestito da Stripe. Puoi pagare anche sdraiato.</p>
+</form>
+
+<div class="piede"><p>Assistenza: <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a> · SitoComodo · P.IVA&nbsp;05299170752</p></div>
+</div></main>
+
+<aside class="destra" id="riepilogo" aria-label="Riepilogo dell'ordine"><div class="dentro">
+<button type="button" class="apri-riepilogo" aria-expanded="false" aria-controls="corpo-riepilogo">
+<span><span class="testo-apri">Mostra il riepilogo dell'ordine</span><span class="freccia" aria-hidden="true">⌄</span></span><strong>99,00 €</strong>
+</button>
+<div class="corpo-riepilogo" id="corpo-riepilogo">
+<div class="prodotto">
+<div class="miniatura"><img src="../apple-touch-icon.png" width="64" height="64" alt=""><span class="quantita">1</span></div>
+<div class="descr"><strong>Sito vetrina SitoComodo</strong><span>Fino a 3 pagine, testi scritti per te</span></div>
+<span>99,00 €</span>
+</div>
+<dl class="righe">
+<div><dt>Subtotale</dt><dd>99,00 €</dd></div>
+<div><dt>Dominio<span class="tenue" id="dom-riep">da scegliere</span></dt><dd>Gratis</dd></div>
+<div><dt>Hosting per il primo anno</dt><dd>Gratis</dd></div>
+</dl>
+<div class="totale"><span>Totale</span><span><small>EUR</small>99,00 €</span></div>
+<p class="iva">IVA inclusa</p>
+<div class="dopo">
+<p><strong>Dopo il pagamento</strong> ci racconti la tua attività in 5 minuti e il sito è online in 30 minuti.*</p>
+<p>* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
+</div>
+</div>
+</div></aside>
+</div>
+<script>
+(function(){
+  var LINK = "https://buy.stripe.com/test_9B6aEY5TcfGL1ZY6284Rq00";
+
+  var apri = document.querySelector('.apri-riepilogo'), destra = document.getElementById('riepilogo');
+  apri.addEventListener('click', function(){
+    var aperto = destra.classList.toggle('aperto');
+    apri.setAttribute('aria-expanded', aperto ? 'true' : 'false');
+    apri.querySelector('.testo-apri').textContent = aperto ? 'Nascondi il riepilogo dell’ordine' : 'Mostra il riepilogo dell’ordine';
+  });
+  function leggi(){ try { return JSON.parse(localStorage.getItem('sitocomodo_ordine') || '{}'); } catch(e) { return {}; } }
+  function scrivi(o){ try { localStorage.setItem('sitocomodo_ordine', JSON.stringify(o)); } catch(e) {} }
+
+  var form = document.getElementById('cassa'), input = document.getElementById('cerca'), email = document.getElementById('email');
+  var elenco = document.getElementById('risultati'), domRiep = document.getElementById('dom-riep');
+  var errDom = document.getElementById('errore-dominio'), errMail = document.getElementById('errore-email');
+  var giro = 0, sel = '', salvato = leggi();
+  if (salvato.email) email.value = salvato.email;
+
+  function base(t){
+    return t.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\.(it|com|eu|net|org)$/, '')
+      .replace(/&/g, 'e').replace(/['’`]/g, '').replace(/\s+/g, '')
+      .replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  }
+  function dns(dom){
+    return fetch('https://dns.google/resolve?name=' + dom + '&type=NS').then(function(r){ return r.json(); })
+      .then(function(j){ return j.Status; })
+      .catch(function(){
+        return fetch('https://cloudflare-dns.com/dns-query?name=' + dom + '&type=NS', {headers: {accept: 'application/dns-json'}})
+          .then(function(r){ return r.json(); }).then(function(j){ return j.Status; });
+      })
+      .then(function(s){ return s === 3 ? true : s === 0 ? false : null; });
+  }
+  function libero(dom){
+    if (/\.com$/.test(dom)) {
+      return fetch('https://rdap.verisign.com/com/v1/domain/' + dom, {headers: {accept: 'application/rdap+json'}})
+        .then(function(r){ return r.status === 404 ? true : r.status === 200 ? false : dns(dom); })
+        .catch(function(){ return dns(dom); });
+    }
+    return dns(dom);
+  }
+  function scegli(dom){
+    sel = dom; errDom.hidden = true;
+    domRiep.textContent = dom || 'da scegliere';
+    var o = leggi(); o.dominio = dom; o.quando = Date.now(); scrivi(o);
+  }
+  function opzione(dom, tag){
+    var lab = document.createElement('label'); lab.className = 'opzione attesa';
+    var r = document.createElement('input'); r.type = 'radio'; r.name = 'dominio'; r.value = dom; r.disabled = true;
+    var p = document.createElement('span'); p.className = 'pallino'; p.setAttribute('aria-hidden', 'true');
+    var n = document.createElement('span'); n.className = 'nome'; n.textContent = dom;
+    if (tag) { var t = document.createElement('span'); t.className = 'etichetta'; t.textContent = tag; n.append(t); }
+    var s = document.createElement('span'); s.className = 'stato'; s.textContent = 'Controllo…';
+    lab.append(r, p, n, s); elenco.append(lab);
+    r.addEventListener('change', function(){ if (r.checked) scegli(dom); });
+    return {lab: lab, radio: r, stato: s};
+  }
+  function cerca(){
+    var testo = input.value, b = base(testo), mio = ++giro;
+    elenco.textContent = ''; scegli('');
+    if (b.length < 3) { elenco.hidden = true; input.setAttribute('aria-invalid', 'true'); document.getElementById('nota-cerca').textContent = 'Scrivi un nome di almeno 3 lettere o numeri.'; input.focus(); return; }
+    input.removeAttribute('aria-invalid');
+    document.getElementById('nota-cerca').textContent = 'Risultati per «' + testo.trim() + '»';
+    elenco.hidden = false;
+    var primo = true;
+    [[b + '.it', 'Consigliato'], [b + '.com', ''], [b + '.eu', ''], [b + '-online.it', 'Alternativa']].forEach(function(p){
+      var x = opzione(p[0], p[1]);
+      libero(p[0]).catch(function(){ return null; }).then(function(ok){
+        if (mio !== giro) return;
+        if (ok === true) {
+          x.lab.className = 'opzione libero'; x.radio.disabled = false; x.stato.textContent = 'Gratis';
+          if (primo && !sel) { x.radio.checked = true; scegli(p[0]); }
+          primo = false;
+        } else {
+          x.lab.className = 'opzione preso';
+          x.stato.textContent = ok === false ? 'Già preso' : 'Da riprovare';
+        }
+      });
+    });
+  }
+  document.getElementById('bottone-cerca').addEventListener('click', cerca);
+  input.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); input.blur(); cerca(); } });
+  email.addEventListener('input', function(){ if (email.checkValidity()) { email.removeAttribute('aria-invalid'); errMail.hidden = true; } });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var ok = true, primoErr = null;
+    if (!sel) { errDom.hidden = false; ok = false; primoErr = input; }
+    var m = email.value.trim();
+    if (!m || !email.checkValidity()) { email.setAttribute('aria-invalid', 'true'); errMail.hidden = false; ok = false; primoErr = primoErr || email; }
+    if (!ok) { primoErr.focus(); return; }
+    var o = leggi(); o.dominio = sel; o.email = m; o.quando = Date.now(); scrivi(o);
+    if (!LINK) return;
+    location.href = LINK + '?client_reference_id=' + encodeURIComponent(sel.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it';
+  });
+
+  var q = new URLSearchParams(location.search).get('q');
+  if (q) { input.value = q.slice(0, 80); cerca(); }
+})();
+</script>
+</body>
+</html>

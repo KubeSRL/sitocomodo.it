@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Raccontaci la tua attività – SitoComodo</title>
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Bricolage Grotesque";src:url("../fonts/bricolage-grotesque-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"DM Serif Display";src:url("../fonts/dm-serif-display-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("../fonts/barlow-condensed-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
+:root{--accento:#1D4ED8;--accento-scuro:#1E40AF;--accento-chiaro:#F0F4FF;--bordo:#DEDEDE;--grigio:#F5F5F5;--testo:#1A1A1A;--tenue:#6B6B6B;--errore:#C81E1E;--verde:#0F7B3F}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:var(--testo);background:#FFFFFF}
+a{color:var(--accento)}a:hover{color:var(--accento-scuro)}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accento);outline-offset:2px}
+.solo-lettori{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.marchio{display:inline-flex;align-items:center;gap:8px;min-height:44px;text-decoration:none;color:#111827}
+.marchio>span{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:22px;letter-spacing:-.01em}
+.marchio>span>span{color:#C2410C}
+.marchio:hover{color:#111827}
+
+.testata-tel{display:none}
+.cassa{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100vh}
+.sinistra{display:flex;justify-content:flex-end;padding:48px 64px 40px 40px;border-right:1px solid var(--bordo)}
+.sinistra>.dentro{width:100%;max-width:560px;display:flex;flex-direction:column}
+.destra{background:var(--grigio)}
+.destra>.dentro{max-width:440px;padding:48px 40px 40px 44px;position:sticky;top:0}
+.apri-riepilogo{display:none}
+
+.briciole{list-style:none;margin:22px 0 30px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--tenue)}
+.briciole li+li::before{content:"›";margin-right:6px;color:#9A9A9A}
+.briciole [aria-current]{color:var(--testo);font-weight:600}
+h1{margin:0 0 6px;font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-.01em}
+.sotto{margin:0 0 4px;color:var(--tenue);font-size:14px}
+section{margin-top:30px}
+h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
+.nota-campo{margin:8px 0 0;font-size:13px;color:var(--tenue)}
+
+.campo{position:relative}
+.campo input{width:100%;height:52px;padding:22px 13px 6px;border:1px solid var(--bordo);border-radius:6px;background:#FFFFFF;font-size:16px;-webkit-appearance:none;appearance:none}
+.campo label{position:absolute;left:14px;top:15px;font-size:15px;color:var(--tenue);pointer-events:none;transition:top .12s,font-size .12s}
+.campo input:focus+label,.campo input:not(:placeholder-shown)+label{top:6px;font-size:12px}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:var(--accento);box-shadow:0 0 0 1px var(--accento)}
+[aria-invalid=true]{border-color:var(--errore)!important;box-shadow:0 0 0 1px var(--errore)!important}
+.errore{margin:6px 0 0;font-size:13px;color:var(--errore)}
+
+.primario{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;margin-top:26px;padding:0 20px;border:0;border-radius:6px;background:var(--accento);color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer}
+.primario:hover{background:var(--accento-scuro);color:#FFFFFF}
+.sicuro{margin:12px 0 0;font-size:13px;color:var(--tenue);text-align:center}
+.sicuro svg{vertical-align:-2px;margin-right:6px}
+
+.piede{margin-top:auto;padding-top:40px}
+.piede p{margin:0;padding-top:14px;border-top:1px solid var(--bordo);font-size:12px;color:var(--tenue)}
+
+.prodotto{display:flex;align-items:center;gap:14px}
+.miniatura{position:relative;flex:none;width:64px;height:64px;border:1px solid var(--bordo);border-radius:8px;background:#FDE047}
+.miniatura img{display:block;width:100%;height:100%;border-radius:7px;object-fit:cover}
+.quantita{position:absolute;top:-8px;right:-8px;min-width:21px;height:21px;padding:0 6px;border-radius:11px;background:#666666;color:#FFFFFF;font-size:12px;font-weight:600;line-height:21px;text-align:center}
+.prodotto .descr{flex:1;min-width:0;display:flex;flex-direction:column}
+.prodotto .descr strong{font-weight:600}
+.prodotto .descr span{font-size:13px;color:var(--tenue)}
+.righe{margin:22px 0 0;display:flex;flex-direction:column;gap:8px}
+.righe>div{display:flex;justify-content:space-between;gap:12px}
+.righe dt{min-width:0;overflow-wrap:anywhere}.righe dd{margin:0;white-space:nowrap}
+.righe .tenue{display:block;font-size:13px;color:var(--tenue)}
+.totale{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:18px;font-size:19px;font-weight:600}
+.totale small{font-size:12px;font-weight:400;color:var(--tenue);margin-right:4px}
+.iva{margin:2px 0 0;font-size:13px;color:var(--tenue)}
+.pagato-badge{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#DDF3E4;color:var(--verde);font-size:12px;font-weight:600;vertical-align:middle}
+.dopo{margin-top:28px;padding-top:18px;border-top:1px solid var(--bordo);font-size:13px;color:var(--tenue)}
+.dopo p{margin:0}.dopo p+p{margin-top:8px;font-size:12px}
+
+@media (max-width:999px){
+  .testata-tel{display:flex;justify-content:center;padding:10px 20px;border-bottom:1px solid var(--bordo)}
+  .sinistra .marchio{display:none}
+  .cassa{display:flex;flex-direction:column;min-height:0}
+  .destra{order:-1;border-bottom:1px solid var(--bordo)}
+  .destra>.dentro{position:static;max-width:none;padding:0}
+  .apri-riepilogo{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 20px;border:0;background:var(--grigio);color:var(--accento);font-size:14px;cursor:pointer;text-align:left}
+  .apri-riepilogo .freccia{display:inline-block;margin-left:6px;transition:transform .15s}
+  .apri-riepilogo[aria-expanded=true] .freccia{transform:rotate(180deg)}
+  .apri-riepilogo strong{color:var(--testo);font-size:17px}
+  .corpo-riepilogo{padding:4px 20px 22px}
+  .destra:not(.aperto) .corpo-riepilogo{display:none}
+  .sinistra{justify-content:center;padding:6px 20px 32px;border-right:0}
+  .briciole{margin:18px 0 22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.grazie{display:flex;align-items:center;gap:14px;color:var(--accento)}
+.grazie h1{color:var(--testo);margin:0}
+.grazie .sotto{margin:0}
+.grazie+.sotto{margin-top:12px}
+.voci{display:flex;flex-direction:column;gap:16px}
+.coppia{display:flex;flex-wrap:wrap;gap:16px}
+.coppia>.voce{flex:1 1 220px;min-width:0}
+.voce{display:flex;flex-direction:column;gap:6px;min-width:0}
+.voce>label{font-size:14px;font-weight:600}
+.facolt{font-weight:400;color:var(--tenue)}
+.voce input:not([type=file]),.voce textarea{width:100%;min-height:48px;padding:0 13px;border:1px solid var(--bordo);border-radius:6px;background:#FFFFFF;font-size:16px}
+.voce textarea{padding:12px 13px;line-height:1.5;resize:vertical}
+.voce input:not([type=file]):focus,.voce textarea:focus{outline:none;border-color:var(--accento);box-shadow:0 0 0 1px var(--accento)}
+.voce ::placeholder{color:#9A9A9A}
+.aiuto{font-size:13px;line-height:1.5;color:var(--tenue)}
+.carica{padding:16px;border:1px dashed #BDBDBD;border-radius:6px;background:#FAFAFA}
+.carica input[type=file]{font-size:14px;max-width:100%}
+.carica input[type=file]::file-selector-button{margin-right:12px;min-height:40px;padding:0 16px;border:1px solid var(--bordo);border-radius:6px;background:#FFFFFF;font:inherit;font-weight:600;cursor:pointer}
+.scelti{font-size:13px;font-weight:600;color:var(--verde)}
+.elenco{border:1px solid var(--bordo);border-radius:6px;overflow:hidden}
+.opzione{position:relative;display:flex;align-items:center;gap:12px;padding:14px;background:#FFFFFF;cursor:pointer}
+.opzione+.opzione{border-top:1px solid var(--bordo)}
+.opzione input{position:absolute;opacity:0;width:1px;height:1px}
+.pallino{flex:none;width:18px;height:18px;border:1px solid #B5B5B5;border-radius:50%;background:#FFFFFF}
+.opzione:has(input:checked){background:var(--accento-chiaro);box-shadow:inset 0 0 0 1px var(--accento)}
+.opzione:has(input:checked) .pallino{border:6px solid var(--accento)}
+.opzione:has(input:focus-visible){outline:2px solid var(--accento);outline-offset:-2px}
+.opzione .testo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.opzione .testo strong{font-size:15px;font-weight:600}
+.opzione .testo>span{font-size:13px;color:var(--tenue)}
+.opzione .testo a{align-self:flex-start;font-size:13px;font-weight:600}
+.mini{flex:none;width:96px;height:60px;border:1px solid var(--bordo);border-radius:4px;object-fit:cover;background:var(--grigio)}
+.campione{flex:none;font-size:24px;line-height:1.05;text-align:right}
+.conferma{display:flex;align-items:flex-start;gap:10px;margin-top:28px}
+.conferma input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--accento)}
+.conferma label{font-size:14px;line-height:1.5}
+.esito{margin:16px 0 0;padding:14px 16px;border-radius:6px;font-size:14px;font-weight:500;line-height:1.5;background:#E7F6EC;border:1px solid #9FD3B0;color:#0B5A2E}
+.esito.attenzione{background:#FFF6E5;border-color:#F0C36D;color:#6B4500}
+@media (max-width:640px){
+  .mini{width:72px;height:45px}
+  .campione{font-size:20px}
+}
+</style>
+</head>
+<body>
+<header class="testata-tel"><a class="marchio" href="../"><svg width="44" height="32" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a></header>
+<div class="cassa">
+<main class="sinistra"><div class="dentro">
+<a class="marchio" href="../"><svg width="44" height="32" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
+<nav aria-label="Passaggi dell'ordine"><ol class="briciole">
+<li>Dominio</li>
+<li>Pagamento</li>
+<li aria-current="step">Il tuo sito</li>
+</ol></nav>
+<div class="grazie">
+<svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20.5" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M13.5 22.5l6 6 11-12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div><p class="sotto" id="riga-pagato">Ordine SitoComodo</p><h1>Raccontaci la tua attività</h1></div>
+</div>
+<p class="sotto">Ci vogliono 5 minuti. Appena invii, il tuo sito è online entro 30 minuti. Tu nel frattempo mettiti comodo.</p>
+
+<form id="modulo" novalidate>
+<section aria-labelledby="t1">
+<h2 id="t1">La tua attività</h2>
+<div class="voci">
+<div class="voce">
+<label for="nome">Nome dell'attività</label>
+<input id="nome" name="nome" type="text" placeholder="Es. Pizzeria da Mario" required autocomplete="organization" maxlength="80">
+</div>
+<div class="voce">
+<label for="tipo">Che attività è</label>
+<input id="tipo" name="tipo" type="text" placeholder="Es. pizzeria, idraulico, parrucchiera" required maxlength="80">
+</div>
+<div class="voce">
+<label for="chi">Chi siete</label>
+<textarea id="chi" name="chi" rows="3" placeholder="Es. Siamo una pizzeria di famiglia dal 1987, l'impasto riposa 48 ore e il forno a legna è acceso tutte le sere." aria-describedby="chi-nota" required></textarea>
+<span id="chi-nota" class="aiuto">Due o tre righe con il concetto che vuoi far passare: da quanto lavorate, cosa vi distingue, come lavorate. Scrivi come parli: il testo per il sito lo scriviamo noi partendo da qui.</span>
+</div>
+<div class="voce">
+<label for="servizi">Cosa offri</label>
+<textarea id="servizi" name="servizi" rows="5" placeholder="Margherita – 7 €&#10;Crudo e rucola – 10 €&#10;Fritti della casa – da 4 €" aria-describedby="servizi-nota" required></textarea>
+<span id="servizi-nota" class="aiuto">Un servizio o prodotto per riga, con il prezzo se vuoi mostrarlo. Diventano le schede del sito.</span>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="t2">
+<h2 id="t2">Come ti trovano</h2>
+<div class="voci">
+<div class="coppia">
+<div class="voce">
+<label for="telefono">Telefono</label>
+<input id="telefono" name="telefono" type="tel" required autocomplete="tel">
+</div>
+<div class="voce">
+<label for="whatsapp">WhatsApp <span class="facolt">(facoltativo)</span></label>
+<input id="whatsapp" name="whatsapp" type="tel" placeholder="Se diverso dal telefono">
+</div>
+</div>
+<div class="voce">
+<label for="email-sito">Email da mostrare sul sito</label>
+<input id="email-sito" name="email-sito" type="email" required autocomplete="email">
+</div>
+<div class="voce">
+<label for="indirizzo">Indirizzo <span class="facolt">(facoltativo)</span></label>
+<input id="indirizzo" name="indirizzo" type="text" placeholder="Via, numero, città" autocomplete="street-address">
+</div>
+<div class="voce">
+<label for="orari">Orari <span class="facolt">(facoltativo)</span></label>
+<textarea id="orari" name="orari" rows="2" placeholder="Es. lun–sab 9–13 e 16–20"></textarea>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="t3">
+<h2 id="t3">Logo e foto</h2>
+<div class="voci">
+<div class="voce carica">
+<label for="foto">Foto <span class="facolt">(da 1 a 6)</span></label>
+<input id="foto" name="foto" type="file" accept="image/*" multiple required aria-describedby="foto-nota">
+<span id="foto-nota" class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
+<span class="scelti" id="foto-scelte" aria-live="polite"></span>
+</div>
+<div class="voce carica" id="box-verticale">
+<label for="foto-telefono">Una foto in verticale per il telefono <span class="facolt">(consigliata)</span></label>
+<input id="foto-telefono" name="foto_telefono" type="file" accept="image/*" aria-describedby="verticale-nota">
+<span id="verticale-nota" class="aiuto">Con il modello <span id="nome-modello">Riquadro</span> la foto in alto, sul telefono, è verticale. Mandacene una scattata in verticale (anche diversa da quella per il computer), così sul telefono viene perfetta.</span>
+</div>
+<div class="voce carica">
+<label for="logo">Logo <span class="facolt">(facoltativo)</span></label>
+<input id="logo" name="logo" type="file" accept="image/*" aria-describedby="logo-nota">
+<span id="logo-nota" class="aiuto">Non ce l'hai? Scriviamo il nome con un carattere elegante.</span>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="t4">
+<h2 id="t4">Modello</h2>
+<div class="elenco" role="radiogroup" aria-labelledby="t4">
+<label class="opzione">
+<input type="radio" name="modello" value="tavola" data-nome="Riquadro" checked>
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Riquadro</strong><span>Titolo dentro una grande foto, proposte in schede con foto e prezzo.</span><a href="../esempi/pizzeriadamario/" target="_blank" rel="noopener">Guarda l'esempio</a></span>
+<img class="mini" src="../esempi/miniature/pizzeriadamario.jpg" width="96" height="60" alt="" loading="lazy">
+</label>
+<label class="opzione">
+<input type="radio" name="modello" value="salone" data-nome="Copertina">
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Copertina</strong><span>Foto a tutta larghezza e titolo sotto, listino con i prezzi.</span><a href="../esempi/studiocapellianna/" target="_blank" rel="noopener">Guarda l'esempio</a></span>
+<img class="mini" src="../esempi/miniature/studiocapellianna.jpg" width="96" height="60" alt="" loading="lazy">
+</label>
+<label class="opzione">
+<input type="radio" name="modello" value="bottega" data-nome="Mosaico">
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Mosaico</strong><span>Una foto grande e due piccole, schede con «Chiedi» su WhatsApp.</span><a href="../esempi/fioridilu/" target="_blank" rel="noopener">Guarda l'esempio</a></span>
+<img class="mini" src="../esempi/miniature/fioridilu.jpg" width="96" height="60" alt="" loading="lazy">
+</label>
+<label class="opzione">
+<input type="radio" name="modello" value="pronto" data-nome="Diretto">
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Diretto</strong><span>Il telefono in primo piano e le zone in cui lavori.</span><a href="../esempi/idraulicarossi/" target="_blank" rel="noopener">Guarda l'esempio</a></span>
+<img class="mini" src="../esempi/miniature/idraulicarossi.jpg" width="96" height="60" alt="" loading="lazy">
+</label>
+<label class="opzione">
+<input type="radio" name="modello" value="studio" data-nome="Classico">
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Classico</strong><span>Titolo centrato, foto ampia, elenco ordinato.</span><a href="../esempi/studiobianchi/" target="_blank" rel="noopener">Guarda l'esempio</a></span>
+<img class="mini" src="../esempi/miniature/studiobianchi.jpg" width="96" height="60" alt="" loading="lazy">
+</label>
+</div>
+</section>
+
+<section aria-labelledby="t5">
+<h2 id="t5">Carattere dei titoli</h2>
+<div class="elenco" role="radiogroup" aria-labelledby="t5">
+<label class="opzione">
+<input type="radio" name="carattere" value="moderno" checked>
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Moderno</strong><span>Rotondo e amichevole</span></span>
+<span class="campione" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800" aria-hidden="true">Il tuo nome</span>
+</label>
+<label class="opzione">
+<input type="radio" name="carattere" value="elegante">
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Elegante</strong><span>Classico, con grazie</span></span>
+<span class="campione" style="font-family:'DM Serif Display',serif;font-weight:400" aria-hidden="true">Il tuo nome</span>
+</label>
+<label class="opzione">
+<input type="radio" name="carattere" value="deciso">
+<span class="pallino" aria-hidden="true"></span>
+<span class="testo"><strong>Deciso</strong><span>Stretto e alto, da insegna</span></span>
+<span class="campione" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase" aria-hidden="true">Il tuo nome</span>
+</label>
+</div>
+</section>
+
+<section aria-labelledby="t6">
+<h2 id="t6">Facoltativo</h2>
+<div class="voci">
+<div class="coppia">
+<div class="voce">
+<label for="colori">Colori preferiti <span class="facolt">(facoltativo)</span></label>
+<input id="colori" name="colori" type="text" placeholder="Es. rosso e bianco">
+</div>
+<div class="voce">
+<label for="social">Link social <span class="facolt">(facoltativo)</span></label>
+<input id="social" name="social" type="text" placeholder="Instagram, Facebook…">
+</div>
+</div>
+<div class="voce">
+<label for="google">La tua scheda su Google Maps <span class="facolt">(facoltativo)</span></label>
+<input id="google" name="google" type="url" placeholder="Il link della tua attività su Google Maps" aria-describedby="google-nota">
+<span id="google-nota" class="aiuto">Se ce l'hai, la colleghiamo al sito: aiuta Google a capire che sito e scheda sono della stessa attività.</span>
+</div>
+</div>
+</section>
+
+<div class="conferma">
+<input id="diritti" name="diritti" type="checkbox" required>
+<label for="diritti">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
+</div>
+
+<button type="submit" class="primario">Crea il mio sito</button>
+<p id="esito" class="esito" role="status" hidden></p>
+</form>
+
+<div class="piede"><p>Assistenza: <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a> · SitoComodo · P.IVA&nbsp;05299170752</p></div>
+</div></main>
+
+<aside class="destra" id="riepilogo" aria-label="Riepilogo dell'ordine"><div class="dentro">
+<button type="button" class="apri-riepilogo" aria-expanded="false" aria-controls="corpo-riepilogo">
+<span><span class="testo-apri">Mostra il riepilogo dell'ordine</span><span class="freccia" aria-hidden="true">⌄</span></span><strong>99,00 €</strong>
+</button>
+<div class="corpo-riepilogo" id="corpo-riepilogo">
+<div class="prodotto">
+<div class="miniatura"><img src="../apple-touch-icon.png" width="64" height="64" alt=""><span class="quantita">1</span></div>
+<div class="descr"><strong>Sito vetrina SitoComodo</strong><span>Fino a 3 pagine, testi scritti per te</span></div>
+<span>99,00 €</span>
+</div>
+<dl class="righe">
+<div><dt>Subtotale</dt><dd>99,00 €</dd></div>
+<div><dt>Dominio<span class="tenue" id="dom-riep">da scegliere</span></dt><dd>Gratis</dd></div>
+<div><dt>Hosting per il primo anno</dt><dd>Gratis</dd></div>
+</dl>
+<div class="totale"><span>Totale<span class="pagato-badge" id="badge-pagato" hidden>Pagato</span></span><span><small>EUR</small>99,00 €</span></div>
+<p class="iva">IVA inclusa</p>
+<div class="dopo" id="nota-it" hidden>
+<p><strong>Hai scelto un .it?</strong> Ti arriva un'email dal Registro .it per confermare i tuoi dati: clicca il link. Intanto il sito è già online su un indirizzo provvisorio.</p>
+</div>
+</div>
+</div></aside>
+</div>
+<script>
+(function(){
+  var INVIO_ATTIVO = false;
+
+  var apri = document.querySelector('.apri-riepilogo'), destra = document.getElementById('riepilogo');
+  apri.addEventListener('click', function(){
+    var aperto = destra.classList.toggle('aperto');
+    apri.setAttribute('aria-expanded', aperto ? 'true' : 'false');
+    apri.querySelector('.testo-apri').textContent = aperto ? 'Nascondi il riepilogo dell’ordine' : 'Mostra il riepilogo dell’ordine';
+  });
+  function leggi(){ try { return JSON.parse(localStorage.getItem('sitocomodo_ordine') || '{}'); } catch(e) { return {}; } }
+  function scrivi(o){ try { localStorage.setItem('sitocomodo_ordine', JSON.stringify(o)); } catch(e) {} }
+
+  var p = new URLSearchParams(location.search), o = leggi();
+  var dom = (p.get('dominio') || o.dominio || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 70);
+  if (dom) document.getElementById('dom-riep').textContent = dom;
+  var mailSito = document.getElementById('email-sito');
+  if (o.email && !mailSito.value) mailSito.value = o.email;
+  document.getElementById('nota-it').hidden = !/\.it$/.test(dom);
+  if (p.get('session_id')) {
+    document.getElementById('riga-pagato').textContent = 'Pagamento ricevuto, grazie!';
+    document.getElementById('badge-pagato').hidden = false;
+  }
+
+  var box = document.getElementById('box-verticale'), nomeMod = document.getElementById('nome-modello');
+  function verticale(){
+    var m = document.querySelector('input[name=modello]:checked');
+    box.hidden = !(m && (m.value === 'tavola' || m.value === 'bottega'));
+    if (m) nomeMod.textContent = m.getAttribute('data-nome');
+  }
+  document.querySelectorAll('input[name=modello]').forEach(function(r){ r.addEventListener('change', verticale); });
+  verticale();
+
+  var foto = document.getElementById('foto'), scelte = document.getElementById('foto-scelte');
+  foto.addEventListener('change', function(){
+    var n = foto.files.length;
+    foto.setCustomValidity(n > 6 ? 'Puoi caricare al massimo 6 foto: scegli le migliori.' : '');
+    scelte.textContent = n ? (n === 1 ? '1 foto scelta' : n + ' foto scelte') : '';
+  });
+
+  var form = document.getElementById('modulo'), esito = document.getElementById('esito');
+  form.addEventListener('input', function(e){ if (e.target.checkValidity && e.target.checkValidity()) e.target.removeAttribute('aria-invalid'); });
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var primo = null;
+    Array.prototype.forEach.call(form.elements, function(el){
+      if (!el.willValidate) return;
+      if (el.checkValidity()) el.removeAttribute('aria-invalid'); else { el.setAttribute('aria-invalid', 'true'); if (!primo) primo = el; }
+    });
+    if (primo) { primo.focus(); primo.reportValidity(); return; }
+    esito.hidden = false;
+    if (!INVIO_ATTIVO) {
+      esito.className = 'esito attenzione';
+      esito.textContent = 'Questa è la versione di prova del modulo: è tutto compilato bene, ma l’invio si attiva appena colleghiamo il sistema degli ordini.';
+      return;
+    }
+    var t = new Date(Date.now() + 30 * 60 * 1000);
+    var ora = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+    esito.className = 'esito';
+    esito.textContent = 'Ricevuto! Il tuo sito sarà online entro le ' + ora + ' su un indirizzo provvisorio, e sul tuo dominio appena il registro lo attiva. Poi ti mandiamo per email tutte le credenziali di sito, hosting e dominio.';
+  });
+})();
+</script>
+</body>
+</html>
