@@ -36,6 +36,8 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
 .scheda{flex:999 1 560px;min-width:0;background:#FFFFFF;border:2px solid #111827;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:28px}
 h1{margin:0 0 10px;font-size:clamp(32px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em}
 .intro{margin:0;font-size:18px;line-height:1.55;color:#374151}
+.corpo.stretto{max-width:860px}
+.corpo.stretto>.scheda{flex-basis:100%}
 .lato{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px}
 .riepilogo{background:#FFFFFF;border:2px solid #111827;border-radius:24px;padding:28px;box-shadow:6px 6px 0 #111827;display:flex;flex-direction:column;gap:18px;scroll-margin-top:16px}
 .riepilogo h2{margin:0;font-size:22px}
@@ -63,6 +65,8 @@ dd a{display:block;font-size:14px;font-weight:600}
   .nota{padding:20px}
 }
 
+.avanti{display:flex;flex-direction:column;gap:10px;padding-top:24px;border-top:2px solid #E5E7EB;scroll-margin-top:16px}
+.nota-asterisco{font-size:13px}
 .cerca{display:flex;flex-wrap:wrap;gap:8px;background:#FFFFFF;border:2px solid #111827;border-radius:20px;padding:8px;box-shadow:6px 6px 0 #111827}
 .cerca input{flex:1 1 220px;min-width:0;min-height:56px;border:0;background:transparent;font:inherit;font-size:19px;padding:0 14px;color:#111827}
 .cerca button{flex:0 0 auto;min-height:56px;padding:0 28px;border:0;border-radius:14px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
@@ -96,7 +100,7 @@ dd a{display:block;font-size:14px;font-weight:600}
 <li>3. Pagamento</li>
 </ol>
 </div></header>
-<div class="corpo">
+<div class="corpo stretto">
 <main class="scheda">
 <div>
 <h1>Scegli il dominio del tuo sito</h1>
@@ -111,23 +115,12 @@ dd a{display:block;font-size:14px;font-weight:600}
 <p id="intestazione" class="intestazione">Esempio: per «Pizzeria da Mario» cerchiamo pizzeriadamario.it, .com ed .eu.</p>
 <ul id="risultati" class="risultati"></ul>
 </div>
-</main>
-<aside class="lato">
-<div id="riepilogo" class="riepilogo">
-<h2>Il tuo ordine</h2>
-<dl>
-<div><dt>SitoComodo</dt><dd>99 €</dd></div>
-<div><dt>Dominio</dt><dd id="scelto">—</dd></div>
-<div class="totale"><dt>Totale</dt><dd>99 € <small>IVA inclusa</small></dd></div>
-</dl>
+<div id="avanti" class="avanti">
 <a id="vai" class="bottone" role="link" aria-disabled="true">Scegli prima un dominio</a>
-<p class="piccolo">Il dominio viene registrato a tuo nome. Paghi alla fine, con carta. Puoi pagare anche sdraiato.</p>
+<p class="piccolo">Il dominio viene registrato a tuo nome. Poi ci racconti la tua attività in 5 minuti, paghi e il sito è online in 30 minuti.*</p>
+<p class="piccolo nota-asterisco">* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
 </div>
-<div class="nota">
-<p><strong>Poi</strong> ci racconti la tua attività in 5 minuti, paghi e il sito è online in 30 minuti.*</p>
-<p>* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
-</div>
-</aside>
+</main>
 </div>
 <script>
 (function(){
@@ -138,7 +131,7 @@ dd a{display:block;font-size:14px;font-weight:600}
 
   var form = document.getElementById('cerca-form'), input = document.getElementById('cerca');
   var lista = document.getElementById('risultati'), intest = document.getElementById('intestazione');
-  var scelto = document.getElementById('scelto'), vai = document.getElementById('vai'), riep = document.getElementById('riepilogo');
+  var vai = document.getElementById('vai'), riep = document.getElementById('avanti');
   var giro = 0, sel = '', righe = [];
 
   function base(t){
@@ -170,7 +163,6 @@ dd a{display:block;font-size:14px;font-weight:600}
       r.li.classList.toggle('scelta', s);
       if (r.btn) { r.btn.textContent = s ? 'Scelto' : 'Scegli'; r.btn.setAttribute('aria-pressed', s ? 'true' : 'false'); }
     });
-    scelto.textContent = sel || '—';
     if (sel) { vai.href = '../ordine/'; vai.removeAttribute('aria-disabled'); vai.textContent = 'Continua'; }
     else { vai.removeAttribute('href'); vai.setAttribute('aria-disabled', 'true'); vai.textContent = 'Scegli prima un dominio'; }
   }

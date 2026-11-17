@@ -39,6 +39,8 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
 .scheda{flex:999 1 560px;min-width:0;background:#FFFFFF;border:2px solid #111827;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:28px}
 h1{margin:0 0 10px;font-size:clamp(32px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em}
 .intro{margin:0;font-size:18px;line-height:1.55;color:#374151}
+.corpo.stretto{max-width:860px}
+.corpo.stretto>.scheda{flex-basis:100%}
 .lato{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px}
 .riepilogo{background:#FFFFFF;border:2px solid #111827;border-radius:24px;padding:28px;box-shadow:6px 6px 0 #111827;display:flex;flex-direction:column;gap:18px;scroll-margin-top:16px}
 .riepilogo h2{margin:0;font-size:22px}
@@ -111,7 +113,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <li>3. Pagamento</li>
 </ol>
 </div></header>
-<div class="corpo">
+<div class="corpo stretto">
 <form id="modulo" class="scheda" novalidate>
 <div>
 <h1>Raccontaci la tua attività.</h1>
@@ -276,10 +278,6 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <label for="diritti">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
 </div>
 
-<button type="submit" class="invia">Crea il mio sito</button>
-</form>
-
-<aside class="lato">
 <div class="riepilogo">
 <h2>Il tuo ordine</h2>
 <dl>
@@ -289,10 +287,9 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <div class="totale"><dt>Totale</dt><dd>99 € <small>IVA inclusa</small></dd></div>
 </dl>
 </div>
-<div class="nota">
-<p><strong>Dopo «Crea il mio sito»</strong> controlli il riepilogo e paghi con carta. Poi ci pensiamo noi.</p>
-</div>
-</aside>
+
+<button type="submit" class="invia">Vai al pagamento</button>
+</form>
 </div>
 <script>
 (function(){
