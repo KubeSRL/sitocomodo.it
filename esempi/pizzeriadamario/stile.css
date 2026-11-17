@@ -27,6 +27,7 @@ ul{margin:0;padding:0}
 [hidden]{display:none!important}
 :focus-visible{outline:3px solid var(--accento);outline-offset:3px;border-radius:6px}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.solo-lettori{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .salta{position:absolute;left:12px;top:-60px;z-index:50;background:var(--inchiostro);color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none}
 .salta:focus{top:12px}
 .contenitore{max-width:1320px;margin:0 auto;padding:0 var(--margine)}
@@ -63,6 +64,9 @@ ul{margin:0;padding:0}
 
 /* ---------- apertura (hero) ---------- */
 .apertura{position:relative;margin:4px clamp(10px,1.4vw,20px) 0;border-radius:var(--r-grande);overflow:hidden;min-height:min(84svh,820px);display:flex;align-items:flex-end;background:var(--inchiostro);isolation:isolate}
+picture{display:contents}
+[id]{scroll-margin-top:96px}
+.foto-ap{object-position:var(--pos,50% 50%)}
 .apertura-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;animation:apri 1.4s cubic-bezier(.2,.7,.2,1) both}
 .apertura::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,.12) 0%,rgba(0,0,0,.06) 26%,rgba(0,0,0,.46) 60%,rgba(0,0,0,.78) 100%),linear-gradient(90deg,rgba(0,0,0,.52) 0%,rgba(0,0,0,.2) 50%,rgba(0,0,0,0) 72%)}
 .apertura h1,.apertura-sotto{text-shadow:0 1px 24px rgba(0,0,0,.28)}
@@ -75,7 +79,7 @@ ul{margin:0;padding:0}
 .etichetta.stato.chiuso::before{background:#D4D4D8}
 .apertura h1{font-size:clamp(46px,7.4vw,108px);line-height:.95;letter-spacing:-.028em;max-width:11.5ch}
 .apertura-sotto{font-size:clamp(17px,1.5vw,20px);line-height:1.5;max-width:46ch;margin:22px 0 30px;color:rgba(255,255,255,.9)}
-@keyframes apri{from{transform:scale(1.06);opacity:.4}to{transform:none;opacity:1}}
+@keyframes apri{from{transform:scale(1.04)}to{transform:none}}
 
 /* ---------- sezioni ---------- */
 .sezione{padding:clamp(72px,9vw,128px) 0 0}
@@ -229,6 +233,7 @@ ul{margin:0;padding:0}
 
 /* ---------- telefono ---------- */
 @media (max-width:640px){
+ .foto-ap{object-position:var(--pos-tel,50% 50%)}
  body{font-size:16px;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
  :root{--r-grande:24px;--r-medio:18px}
  .testata-riga{height:64px}
@@ -280,3 +285,76 @@ ul{margin:0;padding:0}
  html{scroll-behavior:auto}
  *,*::before,*::after{animation:none!important;transition:none!important}
 }
+
+/* ======== pezzi usati dagli scheletri ======== */
+.pillola-contorno{background:transparent;color:var(--inchiostro);box-shadow:inset 0 0 0 1.5px currentColor}
+.pillola-contorno:hover{background:var(--tinta)}
+.etichetta-chiara{background:var(--tinta);color:var(--inchiostro);-webkit-backdrop-filter:none;backdrop-filter:none}
+.etichetta-chiara.stato{color:var(--inchiostro)}
+.etichetta-chiara.stato.chiuso::before{background:#A1A1AA}
+.chiamata-scura{background:var(--inchiostro)}
+.dove-righe{border-top:2px solid var(--inchiostro);padding-top:clamp(32px,4vw,56px)}
+.passi-linea .passi-lista li{border-top:2px solid var(--inchiostro);padding-top:22px}
+.passi-linea .passo-n{width:auto;height:auto;background:none;color:var(--accento);display:block;font-size:44px;line-height:1;margin-bottom:14px}
+.passi-scuro{background:var(--inchiostro);color:#fff;border-radius:var(--r-grande);padding:clamp(28px,4.4vw,64px)}
+.passi-scuro .passi-lista p{color:rgba(255,255,255,.76)}
+.chi-rovescio{grid-template-columns:minmax(0,6fr) minmax(0,5fr)}
+.chi-rovescio .chi-foto{order:2}
+.galleria.galleria-uguale{grid-template-columns:repeat(3,1fr);grid-template-rows:none;height:auto}
+.galleria.galleria-uguale li,.galleria.galleria-uguale li:first-child{aspect-ratio:3/4;grid-row:auto;grid-column:auto}
+.striscia{margin:0;background:var(--inchiostro);color:#fff;text-align:center;font-size:15px}
+.striscia a{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:8px 16px;text-decoration:none}
+.striscia svg{width:18px;height:18px;color:var(--accento);filter:brightness(1.6)}
+.striscia strong{white-space:nowrap}
+/* listino prezzi */
+.listino{list-style:none;columns:2;column-gap:clamp(32px,5vw,88px)}
+.listino li{break-inside:avoid;padding:22px 0;border-bottom:1.5px solid var(--linea)}
+.listino-riga{display:flex;align-items:baseline;gap:12px}
+.listino h3{font-size:clamp(22px,2vw,27px);letter-spacing:-.012em;line-height:1.15}
+.listino-linea{flex:1;min-width:24px;border-bottom:2px dotted var(--tinta-forte);transform:translateY(-5px)}
+.listino-prezzo{font-weight:600;font-size:18px;white-space:nowrap}
+.listino p{color:var(--tenue);margin-top:6px;max-width:46ch}
+/* servizi a righe */
+.righe{list-style:none;border-top:2px solid var(--inchiostro)}
+.righe li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr) auto;gap:10px 40px;align-items:baseline;padding:28px 0;border-bottom:1.5px solid var(--linea)}
+.righe h3{font-size:clamp(24px,2.4vw,32px);letter-spacing:-.02em;line-height:1.1}
+.righe p{color:var(--tenue);font-size:18px;max-width:54ch}
+/* prodotti */
+.bo-prodotti{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:clamp(18px,2vw,28px)}
+.bo-prodotto figure{margin:0 0 16px;border-radius:var(--r-medio);overflow:hidden;aspect-ratio:4/5;background:var(--tinta)}
+.bo-prodotto img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.bo-prodotto:hover img{transform:scale(1.04)}
+.bo-prodotto h3{font-size:21px;letter-spacing:-.012em;margin-bottom:6px}
+.bo-prodotto p{color:var(--tenue);font-size:16px}
+.bo-prodotto-piede{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
+.bo-prodotto-piede .pillola{min-height:44px;padding:10px 16px;font-size:15px}
+.bo-plus{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-top:clamp(32px,4vw,48px);background:var(--tinta);border-radius:var(--r-grande);padding:clamp(24px,3.4vw,44px)}
+.bo-plus li{display:flex;gap:14px;align-items:flex-start}
+.bo-plus svg{width:26px;height:26px;color:var(--accento);flex:none;margin-top:2px}
+.bo-plus h3{font-size:20px;margin-bottom:4px}
+.bo-plus p{color:var(--tenue);font-size:16px}
+.bo-nota{color:var(--tenue)}
+.riquadri-dopo{margin-top:clamp(32px,4vw,48px)}
+@media (max-width:900px){
+ .chi-rovescio .chi-foto{order:0}
+ .chi-rovescio{grid-template-columns:1fr}
+ .listino{columns:1}
+ .righe li{grid-template-columns:1fr;gap:8px}
+ .galleria.galleria-uguale{grid-template-columns:1fr 1fr}
+ .galleria.galleria-uguale li:first-child{grid-column:1/-1;aspect-ratio:16/10}
+}
+@media (max-width:640px){
+ .righe li{padding:22px 0}
+ .righe h3{font-size:24px}
+ .righe p{font-size:16.5px}
+ .listino h3{font-size:21px}
+ .listino-prezzo{font-size:16px}
+ .bo-prodotti{grid-template-columns:1fr 1fr;gap:20px 12px}
+ .bo-prodotto h3{font-size:18px}
+ .bo-prodotto p{font-size:15px}
+ .bo-prodotto-piede{flex-direction:column;align-items:flex-start}
+ .bo-prodotto-piede .pillola{width:100%}
+ .striscia{font-size:14px}
+ .passi-linea .passo-n{font-size:36px}
+}
+
