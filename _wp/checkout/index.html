@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pagamento – SitoComodo</title>
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+:root{--accento:#1D4ED8;--accento-scuro:#1E40AF;--bordo:#DEDEDE;--grigio:#F5F5F5;--testo:#1A1A1A;--tenue:#6B6B6B;--errore:#C81E1E;--verde:#0F7B3F}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:var(--testo);background:#FFFFFF}
+a{color:var(--accento)}a:hover{color:var(--accento-scuro)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accento);outline-offset:2px}
+.marchio{display:inline-flex;align-items:center;gap:8px;min-height:44px;text-decoration:none;color:#111827}
+.marchio svg{width:44px;height:32px}
+.marchio>span{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:22px;letter-spacing:-.01em}
+.marchio>span>span{color:#C2410C}
+.marchio:hover{color:#111827}
+
+.testata-tel{display:none}
+.cassa{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100vh}
+.sinistra{display:flex;justify-content:flex-end;padding:48px 64px 40px 40px;border-right:1px solid var(--bordo)}
+.sinistra>.dentro{width:100%;max-width:560px;display:flex;flex-direction:column}
+.destra{background:var(--grigio)}
+.destra>.dentro{max-width:440px;padding:48px 40px 40px 44px;position:sticky;top:0}
+.apri-riepilogo{display:none}
+
+.briciole{list-style:none;margin:22px 0 30px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--tenue)}
+.briciole li+li::before{content:"›";margin-right:6px;color:#9A9A9A}
+.briciole a{color:var(--accento);text-decoration:none}
+.briciole [aria-current]{color:var(--testo);font-weight:600}
+h1{margin:0 0 6px;font-size:24px;line-height:1.25;font-weight:600;letter-spacing:-.01em}
+.sotto{margin:0;color:var(--tenue);font-size:14px}
+section{margin-top:28px}
+h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
+.nota-campo{margin:8px 0 0;font-size:13px;color:var(--tenue)}
+
+.rivedi{margin:0;border:1px solid var(--bordo);border-radius:6px;padding:0 14px}
+.rivedi>div{display:flex;align-items:baseline;gap:12px;padding:13px 0}
+.rivedi>div+div{border-top:1px solid var(--bordo)}
+.rivedi dt{flex:0 0 76px;color:var(--tenue)}
+.rivedi dd{flex:1;min-width:0;margin:0;overflow-wrap:anywhere}
+.rivedi a{flex:none;font-size:13px}
+
+.campo{position:relative}
+.campo input{width:100%;height:52px;padding:22px 13px 6px;border:1px solid var(--bordo);border-radius:6px;background:#FFFFFF;font-size:16px;-webkit-appearance:none;appearance:none}
+.campo label{position:absolute;left:14px;top:15px;font-size:15px;color:var(--tenue);pointer-events:none;transition:top .12s,font-size .12s}
+.campo input:focus+label,.campo input:not(:placeholder-shown)+label{top:6px;font-size:12px}
+.campo input:focus{outline:none;border-color:var(--accento);box-shadow:0 0 0 1px var(--accento)}
+[aria-invalid=true]{border-color:var(--errore)!important;box-shadow:0 0 0 1px var(--errore)!important}
+.errore{margin:6px 0 0;font-size:13px;color:var(--errore)}
+.avviso{margin:0;padding:14px 16px;border-radius:6px;font-size:14px;line-height:1.5;background:#FFF6E5;border:1px solid #F0C36D;color:#6B4500}
+
+.primario{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;margin-top:26px;padding:0 20px;border:0;border-radius:6px;background:var(--accento);color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer}
+.primario:hover{background:var(--accento-scuro);color:#FFFFFF}
+.sicuro{margin:12px 0 0;font-size:13px;color:var(--tenue);text-align:center}
+.sicuro svg{vertical-align:-2px;margin-right:6px}
+
+.piede{margin-top:auto;padding-top:40px}
+.piede p{margin:0;padding-top:14px;border-top:1px solid var(--bordo);font-size:12px;color:var(--tenue)}
+
+.prodotto{display:flex;align-items:center;gap:14px}
+.miniatura{position:relative;flex:none;width:64px;height:64px;border:1px solid var(--bordo);border-radius:8px;background:#FDE047}
+.miniatura img{display:block;width:100%;height:100%;border-radius:7px;object-fit:cover}
+.quantita{position:absolute;top:-8px;right:-8px;min-width:21px;height:21px;padding:0 6px;border-radius:11px;background:#666666;color:#FFFFFF;font-size:12px;font-weight:600;line-height:21px;text-align:center}
+.prodotto .descr{flex:1;min-width:0;display:flex;flex-direction:column}
+.prodotto .descr strong{font-weight:600}
+.prodotto .descr span{font-size:13px;color:var(--tenue);overflow-wrap:anywhere}
+.righe{margin:22px 0 0;display:flex;flex-direction:column;gap:8px}
+.righe>div{display:flex;justify-content:space-between;gap:12px}
+.righe dt{min-width:0;overflow-wrap:anywhere}.righe dd{margin:0;white-space:nowrap}
+.righe .tenue{display:block;font-size:13px;color:var(--tenue)}
+.totale{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:18px;font-size:19px;font-weight:600}
+.totale small{font-size:12px;font-weight:400;color:var(--tenue);margin-right:4px}
+.iva{margin:2px 0 0;font-size:13px;color:var(--tenue)}
+.pagato-badge{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:#DDF3E4;color:var(--verde);font-size:12px;font-weight:600;vertical-align:middle}
+.dopo{margin-top:28px;padding-top:18px;border-top:1px solid var(--bordo);font-size:12px;color:var(--tenue)}
+.dopo p{margin:0}
+
+.grazie{display:flex;align-items:center;gap:14px;margin-top:28px;color:var(--accento)}
+.grazie h1{color:var(--testo);margin:0}
+.riquadro{margin-top:24px;padding:18px;border:1px solid var(--bordo);border-radius:6px}
+.riquadro h2{font-size:16px;margin:0 0 6px}
+.riquadro p{margin:0;color:#3A3A3A}
+
+@media (max-width:999px){
+  .testata-tel{display:flex;justify-content:center;padding:10px 20px;border-bottom:1px solid var(--bordo)}
+  .sinistra .marchio{display:none}
+  .cassa{display:flex;flex-direction:column;min-height:0}
+  .destra{order:-1;border-bottom:1px solid var(--bordo)}
+  .destra>.dentro{position:static;max-width:none;padding:0}
+  .apri-riepilogo{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 20px;border:0;background:var(--grigio);color:var(--accento);font-size:14px;cursor:pointer;text-align:left}
+  .apri-riepilogo .freccia{display:inline-block;margin-left:6px;transition:transform .15s}
+  .apri-riepilogo[aria-expanded=true] .freccia{transform:rotate(180deg)}
+  .apri-riepilogo strong{color:var(--testo);font-size:17px}
+  .corpo-riepilogo{padding:4px 20px 22px}
+  .destra:not(.aperto) .corpo-riepilogo{display:none}
+  .sinistra{justify-content:center;padding:6px 20px 32px;border-right:0}
+  .briciole{margin:18px 0 22px}
+  .grazie{margin-top:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="testata-tel"><a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a></header>
+<div class="cassa">
+<main class="sinistra"><div class="dentro">
+<a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
+<nav aria-label="Passaggi dell'ordine"><ol class="briciole">
+<li><a href="../ordina/">Dominio</a></li>
+<li><a href="../ordine/">Il tuo sito</a></li>
+<li aria-current="step">Pagamento</li>
+</ol></nav>
+<h1>Pagamento</h1>
+<p class="sotto">Controlla il riepilogo e paga: il tuo sito è online entro 30 minuti.*</p>
+
+<p class="avviso" id="manca" style="margin-top:20px" hidden>Prima scegli il dominio e raccontaci la tua attività: <a href="../ordina/">comincia da qui</a>.</p>
+
+<form id="cassa" novalidate>
+<section aria-labelledby="t-riep">
+<h2 id="t-riep">Il tuo sito</h2>
+<dl class="rivedi">
+<div><dt>Dominio</dt><dd id="r-dominio">—</dd><a href="../ordina/">Cambia</a></div>
+<div><dt>Attività</dt><dd id="r-attivita">—</dd><a href="../ordine/">Modifica</a></div>
+<div><dt>Modello</dt><dd id="r-modello">—</dd><a href="../ordine/">Modifica</a></div>
+</dl>
+</section>
+
+<section aria-labelledby="t-contatto">
+<h2 id="t-contatto">Contatto</h2>
+<div class="campo"><input id="email" type="email" placeholder=" " autocomplete="email" inputmode="email" required aria-describedby="nota-email"><label for="email">Email</label></div>
+<p class="errore" id="errore-email" hidden>Scrivi un'email valida, es. mario@gmail.com</p>
+<p class="nota-campo" id="nota-email">Qui ti mandiamo la ricevuta e, a sito pronto, tutte le credenziali.</p>
+</section>
+
+<button type="submit" class="primario" id="paga">Paga 99,00 €</button>
+<p class="sicuro"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="11" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Pagamento sicuro con carta, gestito da Stripe. Puoi pagare anche sdraiato.</p>
+</form>
+<div class="piede"><p>Assistenza: <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a> · SitoComodo · P.IVA&nbsp;05299170752</p></div>
+</div></main>
+
+<aside class="destra" id="riepilogo" aria-label="Riepilogo dell'ordine"><div class="dentro">
+<button type="button" class="apri-riepilogo" aria-expanded="false" aria-controls="corpo-riepilogo">
+<span><span class="testo-apri">Mostra il riepilogo dell'ordine</span><span class="freccia" aria-hidden="true">⌄</span></span><strong>99,00 €</strong>
+</button>
+<div class="corpo-riepilogo" id="corpo-riepilogo">
+<div class="prodotto">
+<div class="miniatura"><img src="../apple-touch-icon.png" width="64" height="64" alt=""><span class="quantita">1</span></div>
+<div class="descr"><strong>Sito vetrina SitoComodo</strong><span id="riep-sito">Fino a 3 pagine, testi scritti per te</span></div>
+<span>99,00 €</span>
+</div>
+<dl class="righe">
+<div><dt>Subtotale</dt><dd>99,00 €</dd></div>
+<div><dt>Dominio<span class="tenue" id="dom-riep">—</span></dt><dd>Gratis</dd></div>
+<div><dt>Hosting per il primo anno</dt><dd>Gratis</dd></div>
+</dl>
+<div class="totale"><span>Totale</span><span><small>EUR</small>99,00 €</span></div>
+<p class="iva">IVA inclusa</p>
+<div class="dopo">
+<p>* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
+</div>
+</div>
+</div></aside>
+</div>
+<script>
+(function(){
+  var LINK = "https://buy.stripe.com/9B6aEY5TcfGL1ZY6284Rq00";
+
+  function leggi(){ try { return JSON.parse(localStorage.getItem('sitocomodo_ordine') || '{}'); } catch(e) { return {}; } }
+  function scrivi(o){ try { localStorage.setItem('sitocomodo_ordine', JSON.stringify(o)); } catch(e) {} }
+  function pulito(d){ return (d || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 70); }
+
+  var apri = document.querySelector('.apri-riepilogo'), destra = document.getElementById('riepilogo');
+  apri.addEventListener('click', function(){
+    var aperto = destra.classList.toggle('aperto');
+    apri.setAttribute('aria-expanded', aperto ? 'true' : 'false');
+    apri.querySelector('.testo-apri').textContent = aperto ? 'Nascondi il riepilogo dell’ordine' : 'Mostra il riepilogo dell’ordine';
+  });
+  var o = leggi(), dom = pulito(o.dominio);
+  document.getElementById('dom-riep').textContent = dom || '—';
+  if (o.nome) document.getElementById('riep-sito').textContent = o.nome + (o.modello_nome ? ' · modello ' + o.modello_nome : '');
+
+  var email = document.getElementById('email'), errMail = document.getElementById('errore-email'), form = document.getElementById('cassa');
+  var manca = document.getElementById('manca');
+  document.getElementById('r-dominio').textContent = dom || '—';
+  document.getElementById('r-attivita').textContent = o.nome ? o.nome + (o.tipo ? ' · ' + o.tipo : '') : '—';
+  document.getElementById('r-modello').textContent = o.modello_nome ? o.modello_nome + ', carattere ' + (o.carattere_nome || '').toLowerCase() : '—';
+  if (!email.value) email.value = o.email_cliente || o.email || '';
+  var pronto = !!(dom && o.nome && o.modello);
+  manca.hidden = pronto;
+  email.addEventListener('input', function(){ if (email.checkValidity()) { email.removeAttribute('aria-invalid'); errMail.hidden = true; } });
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!pronto) { manca.hidden = false; manca.scrollIntoView({block: 'center'}); return; }
+    var m = email.value.trim();
+    if (!m || !email.checkValidity()) { email.setAttribute('aria-invalid', 'true'); errMail.hidden = false; email.focus(); return; }
+    o.email_cliente = m; scrivi(o);
+    if (!LINK) return;
+    location.href = LINK + '?client_reference_id=' + encodeURIComponent(dom.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it';
+  });
+})();
+</script>
+</body>
+</html>

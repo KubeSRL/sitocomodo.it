@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sitocomodo.it/sitemap.xml

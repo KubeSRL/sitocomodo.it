@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Raccontaci la tua attività – SitoComodo</title>
+<meta name="theme-color" content="#FDE047">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Bricolage Grotesque";src:url("../fonts/bricolage-grotesque-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"DM Serif Display";src:url("../fonts/dm-serif-display-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("../fonts/barlow-condensed-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#111827;background:#EEF4FF;-webkit-text-size-adjust:100%}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+h1,h2,legend{font-family:'Space Grotesk',Inter,sans-serif}
+h1,h2{text-wrap:balance}p{text-wrap:pretty}
+input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #F97316;outline-offset:2px}
+.solo-lettori{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.testata{background:#FFFFFF;border-bottom:2px solid #111827}
+.testata>div{max-width:1200px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.marchio{display:flex;align-items:center;gap:10px;min-height:44px;text-decoration:none;color:#111827}
+.marchio>span{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px}
+.marchio>span>span{color:#C2410C}
+.passi{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.passi li{border:2px solid #9CA3AF;color:#4B5563;border-radius:999px;padding:6px 14px}
+.passi li[aria-current]{background:#111827;border-color:#111827;color:#FFFFFF}
+.passi li.fatto{border-color:#111827;color:#111827}
+.corpo{max-width:1200px;margin:0 auto;padding:56px 24px 96px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:32px}
+.scheda{flex:999 1 560px;min-width:0;background:#FFFFFF;border:2px solid #111827;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:28px}
+h1{margin:0 0 10px;font-size:clamp(32px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em}
+.intro{margin:0;font-size:18px;line-height:1.55;color:#374151}
+.corpo.stretto{max-width:860px}
+.corpo.stretto>.scheda{flex-basis:100%}
+.lato{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.riepilogo{background:#FFFFFF;border:2px solid #111827;border-radius:24px;padding:28px;box-shadow:6px 6px 0 #111827;display:flex;flex-direction:column;gap:18px;scroll-margin-top:16px}
+.riepilogo h2{margin:0;font-size:22px}
+dl{margin:0;display:flex;flex-direction:column;gap:14px;font-size:16px}
+dl>div{display:flex;justify-content:space-between;gap:12px}
+dt{color:#4B5563}dd{margin:0;font-weight:700;overflow-wrap:anywhere;text-align:right}
+dd a{display:block;font-size:14px;font-weight:600}
+.totale{border-top:2px solid #E5E7EB;padding-top:14px}.totale dt{font-weight:700;color:#111827}.totale dd{font-size:20px}
+.totale small{font-size:14px;font-weight:500;color:#4B5563}
+.piccolo{margin:0;font-size:14px;line-height:1.5;color:#4B5563}
+.nota{background:#FFF7ED;border:2px solid #111827;border-radius:24px;padding:24px}
+.nota p{margin:0;font-size:15px;line-height:1.55;color:#374151}
+.nota p+p{margin-top:10px;font-size:14px;color:#4B5563}
+.bottone{display:flex;align-items:center;justify-content:center;min-height:58px;padding:0 20px;border-radius:16px;border:2px solid #111827;background:#1D4ED8;color:#FFFFFF;text-decoration:none;font:inherit;font-weight:700;font-size:18px;cursor:pointer;text-align:center}
+.bottone:hover{color:#FFFFFF;background:#1E40AF}
+.bottone[aria-disabled=true]{background:#E5E7EB;color:#4B5563;border-color:#9CA3AF;cursor:default}
+@media (max-width:640px){
+  .testata>div{padding:12px 16px;gap:10px}
+  .marchio svg{width:40px;height:29px}.marchio>span{font-size:20px}
+  .passi{font-size:13px;gap:6px}.passi li{padding:3px 10px}
+  .corpo{padding:20px 12px 64px;gap:20px}
+  .scheda{padding:24px 18px;border-radius:22px;gap:24px}
+  .intro{font-size:17px}
+  .riepilogo{padding:22px;box-shadow:4px 4px 0 #111827}
+  .nota{padding:20px}
+}
+
+.errore-invio{margin:0;padding:12px 14px;border-radius:12px;background:#FEE2E2;color:#991B1B;font-weight:600}
+fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:16px}
+legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
+.riga2{display:flex;flex-wrap:wrap;gap:16px}
+.campo{min-width:0;display:flex;flex-direction:column;gap:6px}
+.riga2>.campo{flex:1 1 260px}
+.campo>label,.etichetta-gruppo{font-weight:600;font-size:15px;margin:0}
+.campo input:not([type=file]),.campo textarea{width:100%;min-height:50px;border:2px solid #9CA3AF;border-radius:12px;padding:0 14px;font:inherit;font-size:17px;color:#111827;background:#FFFFFF}
+.campo textarea{padding:12px 14px;resize:vertical;line-height:1.5}
+.campo input[type=file]{font:inherit;font-size:15px;max-width:100%}
+.aiuto{font-size:14px;line-height:1.5;color:#4B5563}
+.scelti{font-size:14px;font-weight:700;color:#166534}
+.carica{border:2px dashed #6B7280;border-radius:16px;padding:18px}
+.carica.verticale{border-color:#C2410C;background:#FFF7ED}
+.gruppo{display:flex;flex-direction:column;gap:10px}
+.gruppo+.gruppo{margin-top:8px}
+.scelte{display:flex;flex-wrap:wrap;gap:12px}
+.scelta{flex:1 1 170px;min-width:0;position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:16px;cursor:pointer;background:#FFFFFF;border:2px solid #9CA3AF}
+.scelta:has(input:checked){background:#EEF4FF;border:3px solid #111827;padding:15px}
+.scelta:has(input:focus-visible){outline:3px solid #F97316;outline-offset:2px}
+.scelta input{position:absolute;opacity:0;width:1px;height:1px}
+.scelta a{font-size:14px;font-weight:600;align-self:flex-start}
+.titolo-scelta{font-weight:700;font-size:18px}
+.campione{display:block;font-size:28px;line-height:1.05}
+.conferma{display:flex;align-items:flex-start;gap:12px}
+.conferma input{width:22px;height:22px;margin:2px 0 0;flex:none}
+.conferma label{font-size:16px;line-height:1.5}
+.invia{min-height:60px;border:2px solid #111827;border-radius:18px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:19px;font-weight:700;cursor:pointer;box-shadow:5px 5px 0 #111827}
+.invia:hover{background:#1E40AF}
+[aria-invalid=true]{border-color:#B91C1C!important}
+@media (max-width:640px){
+  legend{font-size:20px}
+  .scelta{flex-basis:100%}
+  .invia{box-shadow:4px 4px 0 #111827}
+}
+</style>
+</head>
+<body>
+<header class="testata"><div>
+<a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
+<ol class="passi" aria-label="Passaggi dell'ordine">
+<li class="fatto">1. Dominio</li>
+<li aria-current="step">2. Raccontaci di te</li>
+<li>3. Pagamento</li>
+</ol>
+</div></header>
+<div class="corpo stretto">
+<form id="modulo" class="scheda" novalidate>
+<div>
+<h1>Raccontaci la tua attività.</h1>
+<p class="intro">Ci vogliono 5 minuti. Dopo il pagamento il tuo sito è online entro 30 minuti. Tu nel frattempo mettiti comodo.</p>
+</div>
+
+<fieldset>
+<legend>1. La tua attività</legend>
+<div class="campo">
+<label for="nome">Nome dell'attività</label>
+<input id="nome" name="nome" type="text" placeholder="Es. Pizzeria da Mario" required autocomplete="organization" maxlength="80">
+</div>
+<div class="campo">
+<label for="tipo">Che attività è</label>
+<input id="tipo" name="tipo" type="text" placeholder="Es. pizzeria, idraulico, parrucchiera" required maxlength="80">
+</div>
+<div class="campo">
+<label for="chi">Chi siete</label>
+<textarea id="chi" name="chi" rows="3" placeholder="Es. Siamo una pizzeria di famiglia dal 1987, l'impasto riposa 48 ore e il forno a legna è acceso tutte le sere." aria-describedby="chi-nota" required></textarea>
+<span id="chi-nota" class="aiuto">Due o tre righe con il concetto che vuoi far passare: da quanto lavorate, cosa vi distingue, come lavorate. Scrivi come parli: il testo per il sito lo scriviamo noi partendo da qui.</span>
+</div>
+<div class="campo">
+<label for="servizi">Cosa offri</label>
+<textarea id="servizi" name="servizi" rows="5" placeholder="Margherita – 7 €&#10;Crudo e rucola – 10 €&#10;Fritti della casa – da 4 €" aria-describedby="servizi-nota" required></textarea>
+<span id="servizi-nota" class="aiuto">Un servizio o prodotto per riga, con il prezzo se vuoi mostrarlo. Diventano le schede del sito.</span>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>2. Come ti trovano</legend>
+<div class="riga2">
+<div class="campo">
+<label for="telefono">Telefono</label>
+<input id="telefono" name="telefono" type="tel" required autocomplete="tel">
+</div>
+<div class="campo">
+<label for="whatsapp">WhatsApp</label>
+<input id="whatsapp" name="whatsapp" type="tel" placeholder="Se diverso dal telefono">
+</div>
+</div>
+<div class="riga2">
+<div class="campo">
+<label for="email">Email per i contatti</label>
+<input id="email" name="email" type="email" required autocomplete="email">
+</div>
+<div class="campo">
+<label for="indirizzo">Indirizzo</label>
+<input id="indirizzo" name="indirizzo" type="text" placeholder="Via, numero, città" autocomplete="street-address">
+</div>
+</div>
+<div class="campo">
+<label for="orari">Orari</label>
+<textarea id="orari" name="orari" rows="2" placeholder="Es. lun–sab 9–13 e 16–20"></textarea>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>3. Logo e foto</legend>
+<div class="riga2">
+<div class="campo carica">
+<label for="logo">Logo</label>
+<input id="logo" name="logo" type="file" accept="image/*">
+<span class="aiuto">Non ce l'hai? Scriviamo il nome con un carattere elegante.</span>
+</div>
+<div class="campo carica">
+<label for="foto">Foto (fino a 6)</label>
+<input id="foto" name="foto[]" type="file" accept="image/*" multiple required>
+<span class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
+<span class="scelti" id="foto-scelte" aria-live="polite"></span>
+</div>
+</div>
+<div id="box-verticale" class="campo carica verticale">
+<label for="foto-telefono">Una foto in verticale per il telefono</label>
+<input id="foto-telefono" name="foto_telefono" type="file" accept="image/*">
+<span class="aiuto">Con il modello <span id="nome-modello">Riquadro</span> la foto in alto, sul telefono, è verticale. Mandacene una scattata in verticale (anche diversa da quella per il computer), così sul telefono viene perfetta.</span>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>4. Modello e carattere</legend>
+<div role="radiogroup" aria-labelledby="t-modello" class="gruppo">
+<p id="t-modello" class="etichetta-gruppo">Modello</p>
+<div class="scelte">
+<label class="scelta">
+<input type="radio" name="modello" value="tavola" data-nome="Riquadro" checked>
+<span class="titolo-scelta">Riquadro</span>
+<span class="aiuto">Titolo dentro una grande foto, proposte in schede con foto e prezzo.</span>
+<a href="../esempi/pizzeriadamario/" target="_blank" rel="noopener">Guarda l'esempio</a>
+</label>
+<label class="scelta">
+<input type="radio" name="modello" value="salone" data-nome="Copertina">
+<span class="titolo-scelta">Copertina</span>
+<span class="aiuto">Foto a tutta larghezza e titolo sotto, listino con i prezzi.</span>
+<a href="../esempi/studiocapellianna/" target="_blank" rel="noopener">Guarda l'esempio</a>
+</label>
+<label class="scelta">
+<input type="radio" name="modello" value="bottega" data-nome="Mosaico">
+<span class="titolo-scelta">Mosaico</span>
+<span class="aiuto">Una foto grande e due piccole, schede con «Chiedi» su WhatsApp.</span>
+<a href="../esempi/fioridilu/" target="_blank" rel="noopener">Guarda l'esempio</a>
+</label>
+<label class="scelta">
+<input type="radio" name="modello" value="pronto" data-nome="Diretto">
+<span class="titolo-scelta">Diretto</span>
+<span class="aiuto">Il telefono in primo piano e le zone in cui lavori.</span>
+<a href="../esempi/idraulicarossi/" target="_blank" rel="noopener">Guarda l'esempio</a>
+</label>
+<label class="scelta">
+<input type="radio" name="modello" value="studio" data-nome="Classico">
+<span class="titolo-scelta">Classico</span>
+<span class="aiuto">Titolo centrato, foto ampia, elenco ordinato.</span>
+<a href="../esempi/studiobianchi/" target="_blank" rel="noopener">Guarda l'esempio</a>
+</label>
+</div>
+</div>
+<div role="radiogroup" aria-labelledby="t-carattere" class="gruppo">
+<p id="t-carattere" class="etichetta-gruppo">Carattere dei titoli</p>
+<div class="scelte">
+<label class="scelta">
+<input type="radio" name="carattere" value="moderno" data-nome="Moderno" checked>
+<span class="campione" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800">Il tuo nome</span>
+<span class="titolo-scelta">Moderno</span>
+<span class="aiuto">Rotondo e amichevole</span>
+</label>
+<label class="scelta">
+<input type="radio" name="carattere" value="elegante" data-nome="Elegante">
+<span class="campione" style="font-family:'DM Serif Display',serif;font-weight:400">Il tuo nome</span>
+<span class="titolo-scelta">Elegante</span>
+<span class="aiuto">Classico, con grazie</span>
+</label>
+<label class="scelta">
+<input type="radio" name="carattere" value="deciso" data-nome="Deciso">
+<span class="campione" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase">Il tuo nome</span>
+<span class="titolo-scelta">Deciso</span>
+<span class="aiuto">Stretto e alto, da insegna</span>
+</label>
+</div>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>5. Facoltativo</legend>
+<div class="riga2">
+<div class="campo">
+<label for="colori">Colori preferiti</label>
+<input id="colori" name="colori" type="text" placeholder="Es. rosso e bianco">
+</div>
+<div class="campo">
+<label for="social">Link social</label>
+<input id="social" name="social" type="text" placeholder="Instagram, Facebook…">
+</div>
+</div>
+<div class="campo">
+<label for="google">La tua scheda su Google Maps</label>
+<input id="google" name="google" type="url" placeholder="Il link della tua attività su Google Maps" aria-describedby="google-nota">
+<span id="google-nota" class="aiuto">Se ce l'hai, la colleghiamo al sito: aiuta Google a capire che sito e scheda sono della stessa attività.</span>
+</div>
+</fieldset>
+
+<div class="conferma">
+<input id="diritti" name="diritti" type="checkbox" required>
+<label for="diritti">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
+</div>
+
+<div class="riepilogo">
+<h2>Il tuo ordine</h2>
+<dl>
+<div><dt>SitoComodo</dt><dd>99 €</dd></div>
+<div><dt>Dominio</dt><dd><span id="dom">—</span><a href="../ordina/">Cambia</a></dd></div>
+<div><dt>Consegna</dt><dd>entro 30 minuti dal pagamento</dd></div>
+<div class="totale"><dt>Totale</dt><dd>99 € <small>IVA inclusa</small></dd></div>
+</dl>
+</div>
+
+<p class="errore-invio" id="errore-invio" role="alert" hidden></p>
+<input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+<button type="submit" class="invia">Vai al pagamento</button>
+</form>
+</div>
+<script>
+(function(){
+
+  function leggi(){ try { return JSON.parse(localStorage.getItem('sitocomodo_ordine') || '{}'); } catch(e) { return {}; } }
+  function scrivi(o){ try { localStorage.setItem('sitocomodo_ordine', JSON.stringify(o)); } catch(e) {} }
+  function pulito(d){ return (d || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 70); }
+
+  var o = leggi(), form = document.getElementById('modulo');
+  var dom = pulito(new URLSearchParams(location.search).get('dominio') || o.dominio);
+  if (dom && dom !== o.dominio) { o.dominio = dom; scrivi(o); }
+  document.getElementById('dom').textContent = dom || '—';
+  var TESTI = ['nome', 'tipo', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'];
+  TESTI.forEach(function(k){ var el = document.getElementById(k); if (o[k] && !el.value) el.value = o[k]; });
+  ['modello', 'carattere'].forEach(function(k){
+    if (!o[k]) return;
+    var r = form.querySelector('input[name=' + k + '][value="' + o[k] + '"]'); if (r) r.checked = true;
+  });
+
+  var box = document.getElementById('box-verticale'), nomeMod = document.getElementById('nome-modello');
+  function verticale(){
+    var m = form.querySelector('input[name=modello]:checked');
+    box.hidden = !(m && (m.value === 'tavola' || m.value === 'bottega'));
+    if (m) nomeMod.textContent = m.getAttribute('data-nome');
+  }
+  form.querySelectorAll('input[name=modello]').forEach(function(r){ r.addEventListener('change', verticale); });
+  verticale();
+
+  var foto = document.getElementById('foto'), scelte = document.getElementById('foto-scelte');
+  foto.addEventListener('change', function(){
+    var n = foto.files.length;
+    foto.setCustomValidity(n > 6 ? 'Puoi caricare al massimo 6 foto: scegli le migliori.' : '');
+    scelte.textContent = n ? (n === 1 ? '1 foto scelta' : n + ' foto scelte') : '';
+  });
+
+  form.addEventListener('input', function(e){ if (e.target.checkValidity && e.target.checkValidity()) e.target.removeAttribute('aria-invalid'); });
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!dom) { location.href = '../ordina/'; return; }
+    var primo = null;
+    Array.prototype.forEach.call(form.elements, function(el){
+      if (!el.willValidate) return;
+      if (el.checkValidity()) el.removeAttribute('aria-invalid'); else { el.setAttribute('aria-invalid', 'true'); if (!primo) primo = el; }
+    });
+    if (primo) { primo.focus(); primo.reportValidity(); return; }
+    var d = leggi();
+    TESTI.forEach(function(k){ d[k] = document.getElementById(k).value.trim(); });
+    var m = form.querySelector('input[name=modello]:checked'), c = form.querySelector('input[name=carattere]:checked');
+    d.modello = m.value; d.modello_nome = m.getAttribute('data-nome');
+    d.carattere = c.value; d.carattere_nome = c.getAttribute('data-nome');
+    d.foto = foto.files.length; d.dominio = dom; d.quando = Date.now();
+    scrivi(d);
+    if (!INVIO) { location.href = '../checkout/'; return; }
+    invia(d);
+  });
+
+  // ---- invio dell'ordine per email (FormSubmit), testi e foto in allegato; poi FormSubmit rimanda al pagamento
+  var INVIO = true, DESTINO = "/wp-admin/admin-post.php?action=sc_ordine", MAX = 9500000;
+  var erroreInvio = document.getElementById('errore-invio');
+  function rimpicciolisci(file, logo){
+    return new Promise(function(ok){
+      if (!file || !/^image\/(jpeg|png|webp|heic|heif)/.test(file.type) || !window.createImageBitmap) { ok(file); return; }
+      if (logo && file.size < 1500000) { ok(file); return; }
+      createImageBitmap(file).then(function(img){
+        var lato = logo ? 1200 : 1800, k = Math.min(1, lato / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var png = logo && file.type === 'image/png';
+        c.toBlob(function(b){
+          if (!b || b.size >= file.size) { ok(file); return; }
+          try { ok(new File([b], file.name.replace(/\.[^.]+$/, '') + (png ? '.png' : '.jpg'), {type: png ? 'image/png' : 'image/jpeg'})); }
+          catch(e) { ok(file); }
+        }, png ? 'image/png' : 'image/jpeg', 0.82);
+      }).catch(function(){ ok(file); });
+    });
+  }
+  function sostituisci(input, files){
+    if (!files.length || !window.DataTransfer) return;
+    try { var dt = new DataTransfer(); files.forEach(function(f){ dt.items.add(f); }); input.files = dt.files; } catch(e) {}
+  }
+  function nascosto(nome, valore){
+    var i = form.querySelector('input[name="' + nome + '"]');
+    if (!i) { i = document.createElement('input'); i.type = 'hidden'; i.name = nome; form.appendChild(i); }
+    i.value = valore;
+  }
+  function invia(d){
+    var btn = form.querySelector('button.invia'), testo = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Carico le foto\u2026'; erroreInvio.hidden = true;
+    var gruppi = [[document.getElementById('foto'), false], [document.getElementById('logo'), true], [document.getElementById('foto-telefono'), false]];
+    Promise.all(gruppi.map(function(g){ return Promise.all(Array.prototype.map.call(g[0].files, function(f){ return rimpicciolisci(f, g[1]); })); }))
+    .then(function(liste){
+      var peso = 0;
+      liste.forEach(function(l, k){ sostituisci(gruppi[k][0], l); l.forEach(function(f){ peso += f.size; }); });
+      if (peso > MAX) {
+        erroreInvio.textContent = 'Le foto pesano troppo per inviarle tutte insieme. Scegline qualcuna in meno, oppure foto pi\u00f9 leggere.';
+        erroreInvio.hidden = false; btn.disabled = false; btn.textContent = testo; return;
+      }
+      nascosto('dominio', d.dominio);
+      nascosto('modello_scelto', d.modello_nome);
+      nascosto('carattere_scelto', d.carattere_nome);
+      btn.textContent = 'Invio l\u2019ordine\u2026';
+      form.action = DESTINO; form.method = 'POST'; form.enctype = 'multipart/form-data';
+      HTMLFormElement.prototype.submit.call(form);
+    }).catch(function(){
+      erroreInvio.textContent = 'Non siamo riusciti a preparare le foto. Riprova, oppure scrivici a info@sitocomodo.it.';
+      erroreInvio.hidden = false; btn.disabled = false; btn.textContent = testo;
+    });
+  }
+  window.addEventListener('pageshow', function(){ var b = form.querySelector('button.invia'); b.disabled = false; b.textContent = 'Vai al pagamento'; });
+})();
+</script>
+</body>
+</html>
