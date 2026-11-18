@@ -1,5 +1,5 @@
 (function(){
-  var PIXEL = '', CHIAVE = 'sitocomodo_consenso', SEI_MESI = 182 * 864e5;
+  var PIXEL = '1131728194134695', BANNER = false, CHIAVE = 'sitocomodo_consenso', SEI_MESI = 182 * 864e5;
   function leggi(){ try { var c = JSON.parse(localStorage.getItem(CHIAVE) || 'null'); return c && Date.now() - c.quando < SEI_MESI ? c.scelta : null; } catch(e) { return null; } }
   function salva(s){ try { localStorage.setItem(CHIAVE, JSON.stringify({scelta: s, quando: Date.now()})); } catch(e) {} }
 
@@ -57,8 +57,9 @@
   }
 
   window.scCookie = {apri: apri};
-  document.addEventListener('click', function(e){ var a = e.target.closest('[data-cookie]'); if (a && PIXEL) { e.preventDefault(); apri(); } });
+  document.addEventListener('click', function(e){ var a = e.target.closest('[data-cookie]'); if (a && PIXEL && BANNER) { e.preventDefault(); apri(); } });
   if (!PIXEL) return;               // senza Pixel non usiamo cookie: niente banner
+  if (!BANNER) { avviaPixel(); return; }   // il banner lo mette Giuseppe: qui il Pixel parte subito
   var s = leggi();
   if (s === 'si') avviaPixel();
   else if (s === null) { if (document.body) apri(); else document.addEventListener('DOMContentLoaded', apri); }
