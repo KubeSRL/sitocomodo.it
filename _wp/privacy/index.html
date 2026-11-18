@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Privacy e cookie – SitoComodo</title>
+<meta name="theme-color" content="#FDE047">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#111827;background:#EEF4FF;-webkit-text-size-adjust:100%}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+h1,h2,legend{font-family:'Space Grotesk',Inter,sans-serif}
+h1,h2{text-wrap:balance}p{text-wrap:pretty}
+input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #F97316;outline-offset:2px}
+.solo-lettori{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.testata{background:#FFFFFF;border-bottom:2px solid #111827}
+.testata>div{max-width:1200px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.marchio{display:flex;align-items:center;gap:10px;min-height:44px;text-decoration:none;color:#111827}
+.marchio>span{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px}
+.marchio>span>span{color:#C2410C}
+.passi{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.passi li{border:2px solid #9CA3AF;color:#4B5563;border-radius:999px;padding:6px 14px}
+.passi li[aria-current]{background:#111827;border-color:#111827;color:#FFFFFF}
+.passi li.fatto{border-color:#111827;color:#111827}
+.corpo{max-width:1200px;margin:0 auto;padding:56px 24px 96px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:32px}
+.scheda{flex:999 1 560px;min-width:0;background:#FFFFFF;border:2px solid #111827;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:28px}
+h1{margin:0 0 10px;font-size:clamp(32px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em}
+.intro{margin:0;font-size:18px;line-height:1.55;color:#374151}
+.corpo.stretto{max-width:860px}
+.corpo.stretto>.scheda{flex-basis:100%}
+.lato{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.riepilogo{background:#FFFFFF;border:2px solid #111827;border-radius:24px;padding:28px;box-shadow:6px 6px 0 #111827;display:flex;flex-direction:column;gap:18px;scroll-margin-top:16px}
+.riepilogo h2{margin:0;font-size:22px}
+dl{margin:0;display:flex;flex-direction:column;gap:14px;font-size:16px}
+dl>div{display:flex;justify-content:space-between;gap:12px}
+dt{color:#4B5563}dd{margin:0;font-weight:700;overflow-wrap:anywhere;text-align:right}
+dd a{display:block;font-size:14px;font-weight:600}
+.totale{border-top:2px solid #E5E7EB;padding-top:14px}.totale dt{font-weight:700;color:#111827}.totale dd{font-size:20px}
+.totale small{font-size:14px;font-weight:500;color:#4B5563}
+.piccolo{margin:0;font-size:14px;line-height:1.5;color:#4B5563}
+.nota{background:#FFF7ED;border:2px solid #111827;border-radius:24px;padding:24px}
+.nota p{margin:0;font-size:15px;line-height:1.55;color:#374151}
+.nota p+p{margin-top:10px;font-size:14px;color:#4B5563}
+.bottone{display:flex;align-items:center;justify-content:center;min-height:58px;padding:0 20px;border-radius:16px;border:2px solid #111827;background:#1D4ED8;color:#FFFFFF;text-decoration:none;font:inherit;font-weight:700;font-size:18px;cursor:pointer;text-align:center}
+.bottone:hover{color:#FFFFFF;background:#1E40AF}
+.bottone[aria-disabled=true]{background:#E5E7EB;color:#4B5563;border-color:#9CA3AF;cursor:default}
+@media (max-width:640px){
+  .testata>div{padding:12px 16px;gap:10px}
+  .marchio svg{width:40px;height:29px}.marchio>span{font-size:20px}
+  .passi{font-size:13px;gap:6px}.passi li{padding:3px 10px}
+  .corpo{padding:20px 12px 64px;gap:20px}
+  .scheda{padding:24px 18px;border-radius:22px;gap:24px}
+  .intro{font-size:17px}
+  .riepilogo{padding:22px;box-shadow:4px 4px 0 #111827}
+  .nota{padding:20px}
+}
+
+.testo h2{margin:8px 0 0;font-size:24px;line-height:1.2}
+.testo p,.testo li{margin:0;font-size:17px;line-height:1.6;color:#374151;max-width:68ch}
+.testo ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.testo section{display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+.testo .bottone{align-self:flex-start;min-height:52px;font-size:17px}
+@media (max-width:640px){.testo p,.testo li{font-size:16px}}
+</style>
+</head>
+<body>
+<header class="testata"><div>
+<a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
+</div></header>
+<div class="corpo stretto">
+<main class="scheda testo">
+<div>
+<h1>Privacy e cookie</h1>
+<p class="intro">Quali dati ci dai quando ordini un sito, cosa ne facciamo e cosa puoi chiederci. Aggiornata il 18 novembre 2026.</p>
+</div>
+
+<section aria-labelledby="p-chi">
+<h2 id="p-chi">Chi tratta i tuoi dati</h2>
+<p>Il titolare è SitoComodo, P.IVA 05299170752. Per qualsiasi domanda sui tuoi dati scrivi a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>.</p>
+</section>
+
+<section aria-labelledby="p-quali">
+<h2 id="p-quali">Quali dati raccogliamo</h2>
+<ul>
+<li>Dal modulo d'ordine: il dominio scelto, nome e tipo di attività, cosa fai e i tuoi servizi, telefono, WhatsApp, email, indirizzo, orari, colori, link ai social e alla scheda Google, il logo e le foto che carichi.</li>
+<li>Dal pagamento: Stripe ci dice importo, nome ed email di chi ha pagato. I dati della carta li vede solo Stripe, noi mai.</li>
+</ul>
+</section>
+
+<section aria-labelledby="p-perche">
+<h2 id="p-perche">Perché li usiamo</h2>
+<ul>
+<li>Per fare il sito che hai ordinato, metterlo online, registrare il dominio e mandarti le credenziali. È il contratto che stipuli con noi (art. 6.1.b del GDPR): senza questi dati non possiamo farlo.</li>
+<li>Per le fatture e gli altri obblighi di legge (art. 6.1.c del GDPR).</li>
+</ul>
+</section>
+
+<section aria-labelledby="p-chi-riceve">
+<h2 id="p-chi-riceve">Chi li riceve</h2>
+<p>Non vendiamo i tuoi dati. Li passiamo solo ai fornitori che ci servono per lavorare, che li trattano per nostro conto:</p>
+<ul>
+<li>IONOS: ospita questo sito e gli ordini.</li>
+<li>Stripe: gestisce i pagamenti.</li>
+<li>OVH: email e registrazione dei domini. Per registrare il dominio, il registro (per esempio il Registro .it) riceve i dati che chiede la legge.</li>
+</ul>
+<p>Stripe può trattare dati anche negli Stati Uniti, con le garanzie previste dal GDPR (EU-US Data Privacy Framework o clausole contrattuali standard).</p>
+</section>
+
+<section aria-labelledby="p-quanto">
+<h2 id="p-quanto">Per quanto tempo</h2>
+<ul>
+<li>Dati dell'ordine, logo e foto: per tutta la durata del servizio e fino a 12 mesi dopo la fine.</li>
+<li>Fatture e dati di pagamento: 10 anni, come chiede la legge.</li>
+</ul>
+</section>
+
+<section id="cookie" aria-labelledby="p-cookie">
+<h2 id="p-cookie">Cookie</h2>
+<p>Usiamo solo cookie tecnici: il sito ricorda nel tuo browser i passaggi dell'ordine, così non perdi quello che hai scritto. Servono a farlo funzionare e non chiedono consenso. Niente cookie di profilazione o pubblicità.</p>
+<p>Per vedere se un dominio è libero, il tuo browser chiede a servizi pubblici (Google Public DNS, Cloudflare, Verisign) il nome che cerchi. Non usano cookie. La pagina di pagamento è di Stripe, che usa i suoi cookie per la sicurezza dei pagamenti.</p>
+</section>
+
+<section aria-labelledby="p-diritti">
+<h2 id="p-diritti">I tuoi diritti</h2>
+<p>Puoi chiederci di vedere i tuoi dati, correggerli, cancellarli, limitarne l'uso, averne una copia o opporti al loro uso, e ritirare il consenso ai cookie quando vuoi. Scrivi a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>: rispondiamo entro 30 giorni. Se pensi che non abbiamo rispettato le regole, puoi fare reclamo al <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+</section>
+</main>
+</div>
+
+<script src="/consenso.js" defer></script>
+</body>
+</html>
