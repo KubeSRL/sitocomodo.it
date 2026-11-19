@@ -543,7 +543,10 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
         $req = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/item/' . rawurlencode($iid) . '/requiredConfiguration');
         if (!is_wp_error($req)) {
             $passi[] = 'configurazioni richieste: ' . implode(', ', array_map(function ($x) { return ($x['label'] ?? '?') . (!empty($x['required']) ? '*' : ''); }, (array) $req));
+            foreach ((array) $req as $x) { $passi[] = 'CONF ' . wp_json_encode($x, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); }
         }
+        $regole = sc_ovh('GET', '/domain/configurationRule?action=create&domain=' . rawurlencode($dominio));
+        $passi[] = 'REGOLE ' . (is_wp_error($regole) ? $regole->get_error_message() : substr(wp_json_encode($regole, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 6000));
         $riepilogo = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/summary');
         if (!is_wp_error($riepilogo)) $passi[] = 'totale carrello IVA inclusa: ' . ($riepilogo['prices']['withTax']['text'] ?? '?');
         $pulisci();
