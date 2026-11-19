@@ -89,6 +89,17 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
 .dopo{margin-top:28px;padding-top:18px;border-top:1px solid var(--bordo);font-size:12px;color:var(--tenue)}
 .dopo p{margin:0}
 
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.scelta-tipo{border:0;margin:0 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.scelta-tipo label{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--bordo);border-radius:6px;cursor:pointer;font-size:14px;background:#FFFFFF}
+.scelta-tipo input{width:16px;height:16px;margin:0;accent-color:var(--accento)}
+.scelta-tipo label:has(input:checked){border-color:var(--accento);box-shadow:0 0 0 1px var(--accento)}
+.griglia{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.griglia .intera{grid-column:1/-1}
+.conferma{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px;line-height:1.45;color:#3A3A3A;cursor:pointer}
+.conferma input{flex:none;width:18px;height:18px;margin:1px 0 0;accent-color:var(--accento)}
+@media (max-width:480px){.griglia{grid-template-columns:1fr}}
+
 .grazie{display:flex;align-items:center;gap:14px;margin-top:28px;color:var(--accento)}
 .grazie h1{color:var(--testo);margin:0}
 .riquadro{margin-top:24px;padding:18px;border:1px solid var(--bordo);border-radius:6px}
@@ -146,8 +157,32 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
 <p class="nota-campo" id="nota-email">Qui ti mandiamo la ricevuta e, a sito pronto, tutte le credenziali.</p>
 </section>
 
+<section aria-labelledby="t-intest">
+<h2 id="t-intest">Intestatario del dominio</h2>
+<p class="nota-campo" style="margin:-4px 0 12px">Il dominio sarà a nome di questa persona o azienda: servono i dati veri, li chiede il registro dei domini.</p>
+<fieldset class="scelta-tipo"><legend class="vh">Chi è l'intestatario</legend>
+<label><input type="radio" name="tipo" value="privato" checked> Privato</label>
+<label><input type="radio" name="tipo" value="ditta"> Ditta individuale o professionista</label>
+<label><input type="radio" name="tipo" value="societa"> Società o associazione</label>
+</fieldset>
+<div class="griglia">
+<div class="campo" data-per="privato ditta"><input id="i-nome" placeholder=" " autocomplete="given-name"><label for="i-nome">Nome</label></div>
+<div class="campo" data-per="privato ditta"><input id="i-cognome" placeholder=" " autocomplete="family-name"><label for="i-cognome">Cognome</label></div>
+<div class="campo intera" data-per="ditta societa"><input id="i-ragione" placeholder=" " autocomplete="organization"><label for="i-ragione">Ragione sociale</label></div>
+<div class="campo" data-per="privato ditta"><input id="i-cf" placeholder=" " maxlength="16" autocapitalize="characters" spellcheck="false"><label for="i-cf">Codice fiscale</label></div>
+<div class="campo" data-per="ditta societa"><input id="i-piva" placeholder=" " maxlength="11" inputmode="numeric"><label for="i-piva">Partita IVA</label></div>
+<div class="campo intera"><input id="i-indirizzo" placeholder=" " autocomplete="street-address"><label for="i-indirizzo">Indirizzo e numero civico</label></div>
+<div class="campo"><input id="i-cap" placeholder=" " maxlength="5" inputmode="numeric" autocomplete="postal-code"><label for="i-cap">CAP</label></div>
+<div class="campo"><input id="i-citta" placeholder=" " autocomplete="address-level2"><label for="i-citta">Città</label></div>
+<div class="campo"><input id="i-prov" placeholder=" " maxlength="2" autocapitalize="characters" spellcheck="false"><label for="i-prov">Provincia (es. MI)</label></div>
+<div class="campo"><input id="i-tel" type="tel" placeholder=" " autocomplete="tel"><label for="i-tel">Telefono</label></div>
+</div>
+<label class="conferma"><input type="checkbox" id="i-ok"> <span>Confermo che i dati sono corretti e che il dominio va registrato a questo nome, secondo le regole del registro. Se finisce in .it, il Registro .it ti manderà un'email per confermarli.</span></label>
+<p class="errore" id="errore-intest" hidden></p>
+</section>
+
 <button type="submit" class="primario" id="paga">Paga 99,00 €</button>
-<p class="sicuro"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="11" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Pagamento sicuro con carta, gestito da Stripe. Puoi pagare anche sdraiato.</p>
+<p class="sicuro"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="11" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>Pagamento sicuro con carta o PayPal, gestito da Stripe. Puoi pagare anche sdraiato.</p>
 </form>
 <div class="piede"><p>Assistenza: <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a> · SitoComodo · P.IVA&nbsp;05299170752 · <a href="/privacy/">Privacy e cookie</a></p></div>
 </div></main>
@@ -202,15 +237,76 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
   var pronto = !!(dom && o.nome && o.modello);
   manca.hidden = pronto;
   email.addEventListener('input', function(){ if (email.checkValidity()) { email.removeAttribute('aria-invalid'); errMail.hidden = true; } });
+
+  // ---- intestatario del dominio
+  var CAMPI = {nome: 'i-nome', cognome: 'i-cognome', ragione: 'i-ragione', cf: 'i-cf', piva: 'i-piva', indirizzo: 'i-indirizzo',
+               cap: 'i-cap', citta: 'i-citta', provincia: 'i-prov', telefono: 'i-tel'};
+  var errInt = document.getElementById('errore-intest'), conferma = document.getElementById('i-ok'), paga = document.getElementById('paga');
+  var salvato = o.intestatario || {};
+  function tipo(){ var r = form.querySelector('input[name=tipo]:checked'); return r ? r.value : 'privato'; }
+  function aggiornaTipo(){
+    var t = tipo();
+    form.querySelectorAll('[data-per]').forEach(function(d){ d.hidden = d.getAttribute('data-per').split(' ').indexOf(t) < 0; });
+  }
+  Object.keys(CAMPI).forEach(function(k){
+    var el = document.getElementById(CAMPI[k]);
+    if (salvato[k]) el.value = salvato[k];
+    el.addEventListener('input', function(){ el.removeAttribute('aria-invalid'); errInt.hidden = true; });
+  });
+  if (salvato.tipo) { var r = form.querySelector('input[name=tipo][value=' + salvato.tipo + ']'); if (r) r.checked = true; }
+  form.querySelectorAll('input[name=tipo]').forEach(function(r){ r.addEventListener('change', aggiornaTipo); });
+  aggiornaTipo();
+
+  function leggiIntestatario(){
+    var d = {tipo: tipo()};
+    Object.keys(CAMPI).forEach(function(k){ d[k] = document.getElementById(CAMPI[k]).value.trim(); });
+    d.cf = d.cf.toUpperCase().replace(/\s/g, ''); d.provincia = d.provincia.toUpperCase(); d.piva = d.piva.replace(/\s/g, '');
+    return d;
+  }
+  // restituisce [id del campo, messaggio] del primo errore, oppure null
+  function controlla(d){
+    var t = d.tipo, serve = function(k){ var el = document.getElementById(CAMPI[k]); return !el.closest('[data-per]') || !el.closest('[data-per]').hidden; };
+    if (serve('nome') && !d.nome) return ['nome', 'Scrivi il nome dell\'intestatario.'];
+    if (serve('cognome') && !d.cognome) return ['cognome', 'Scrivi il cognome dell\'intestatario.'];
+    if (t === 'societa' && !d.ragione) return ['ragione', 'Scrivi la ragione sociale.'];
+    if (serve('cf') && !/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(d.cf)) return ['cf', 'Il codice fiscale ha 16 caratteri, es. RSSMRA80A01F205X.'];
+    if (serve('piva') && !/^[0-9]{11}$/.test(d.piva)) return ['piva', 'La partita IVA ha 11 cifre.'];
+    if (d.indirizzo.length < 5) return ['indirizzo', 'Scrivi via e numero civico.'];
+    if (!/^[0-9]{5}$/.test(d.cap)) return ['cap', 'Il CAP ha 5 cifre.'];
+    if (d.citta.length < 2) return ['citta', 'Scrivi la città.'];
+    if (!/^[A-Z]{2}$/.test(d.provincia)) return ['provincia', 'Scrivi la sigla della provincia, es. MI.'];
+    if (d.telefono.replace(/[^0-9]/g, '').length < 6) return ['telefono', 'Scrivi un numero di telefono.'];
+    return null;
+  }
+  function mostraErrore(k, msg){
+    errInt.textContent = msg; errInt.hidden = false;
+    if (k) { var el = document.getElementById(CAMPI[k]); el.setAttribute('aria-invalid', 'true'); el.focus(); }
+  }
+
   form.addEventListener('submit', function(e){
     e.preventDefault();
     if (!pronto) { manca.hidden = false; manca.scrollIntoView({block: 'center'}); return; }
     var m = email.value.trim();
     if (!m || !email.checkValidity()) { email.setAttribute('aria-invalid', 'true'); errMail.hidden = false; email.focus(); return; }
-    o.email_cliente = m; scrivi(o);
+    var d = leggiIntestatario(), errore = controlla(d);
+    o.email_cliente = m; o.intestatario = d; scrivi(o);
+    if (errore) { mostraErrore(errore[0], errore[1]); return; }
+    if (!conferma.checked) { mostraErrore(null, 'Spunta la conferma dei dati dell\'intestatario.'); conferma.focus(); return; }
     if (!LINK) return;
-    location.href = LINK + '?client_reference_id=' + encodeURIComponent(dom.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it';
+    var rif = dom.replace(/\./g, '_');
+    var vai = function(){ location.href = LINK + '?client_reference_id=' + encodeURIComponent(rif) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it'; };
+    var dati = Object.assign({rif: rif, email: m}, d);
+    paga.disabled = true; paga.textContent = 'Un attimo…';
+    fetch('/wp-json/sitocomodo/v1/intestatario', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dati)})
+      .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
+      .then(function(x){
+        if (x.ok && x.j && x.j.ok) { vai(); return; }
+        paga.disabled = false; paga.textContent = 'Paga 99,00 €';
+        mostraErrore(null, (x.j && x.j.errore) || 'Non siamo riusciti a salvare i dati. Riprova tra un attimo.');
+      })
+      .catch(function(){ paga.disabled = false; paga.textContent = 'Paga 99,00 €'; mostraErrore(null, 'Connessione assente: riprova tra un attimo.'); });
   });
+  window.addEventListener('pageshow', function(){ paga.disabled = false; paga.textContent = 'Paga 99,00 €'; });
 })();
 </script>
 <script src="/consenso.js" defer></script>
