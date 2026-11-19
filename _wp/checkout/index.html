@@ -178,6 +178,10 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
 <div class="campo"><input id="i-tel" type="tel" placeholder=" " autocomplete="tel"><label for="i-tel">Telefono</label></div>
 </div>
 <label class="conferma"><input type="checkbox" id="i-ok"> <span>Confermo che i dati sono corretti e che il dominio va registrato a questo nome, secondo le regole del registro. Se finisce in .it, il Registro .it ti manderà un'email per confermarli.</span></label>
+<div id="blocco-it" hidden>
+<label class="conferma"><input type="checkbox" id="i-reg"> <span>Dichiaro di avere cittadinanza, residenza o sede in un paese dello Spazio Economico Europeo, in Svizzera, a San Marino o in Vaticano, e di avere diritto a usare questo nome. Accetto le regole del Registro .it (assegnazione dei nomi e risoluzione delle dispute), la giurisdizione italiana e l'informativa privacy del Registro. Accetto in modo esplicito che, se i dati sono falsi o sbagliati, il Registro revochi il dominio senza rimborsi, e sollevo il Registro da ogni responsabilità sull'uso del dominio. <a href="https://www.nic.it/" target="_blank" rel="noopener">Leggi le condizioni del Registro .it</a></span></label>
+<label class="conferma" data-per="privato"><input type="checkbox" id="i-whois"> <span>Acconsento a rendere visibili su Internet i miei dati di intestatario (Whois del Registro .it). Se non la spunti, restano riservati.</span></label>
+</div>
 <p class="errore" id="errore-intest" hidden></p>
 </section>
 
@@ -243,6 +247,11 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
                cap: 'i-cap', citta: 'i-citta', provincia: 'i-prov', telefono: 'i-tel'};
   var errInt = document.getElementById('errore-intest'), conferma = document.getElementById('i-ok'), paga = document.getElementById('paga');
   var salvato = o.intestatario || {};
+  var punto_it = /\.it$/.test(dom || ''), regIt = document.getElementById('i-reg'), whois = document.getElementById('i-whois');
+  document.getElementById('blocco-it').hidden = !punto_it;
+  if (salvato.registro_it) regIt.checked = true;
+  if (salvato.whois) whois.checked = true;
+  regIt.addEventListener('change', function(){ errInt.hidden = true; });
   function tipo(){ var r = form.querySelector('input[name=tipo]:checked'); return r ? r.value : 'privato'; }
   function aggiornaTipo(){
     var t = tipo();
@@ -261,6 +270,7 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
     var d = {tipo: tipo()};
     Object.keys(CAMPI).forEach(function(k){ d[k] = document.getElementById(CAMPI[k]).value.trim(); });
     d.cf = d.cf.toUpperCase().replace(/\s/g, ''); d.provincia = d.provincia.toUpperCase(); d.piva = d.piva.replace(/\s/g, '');
+    d.registro_it = punto_it && regIt.checked; d.whois = punto_it && d.tipo === 'privato' && whois.checked;
     return d;
   }
   // restituisce [id del campo, messaggio] del primo errore, oppure null
@@ -292,6 +302,7 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
     o.email_cliente = m; o.intestatario = d; scrivi(o);
     if (errore) { mostraErrore(errore[0], errore[1]); return; }
     if (!conferma.checked) { mostraErrore(null, 'Spunta la conferma dei dati dell\'intestatario.'); conferma.focus(); return; }
+    if (punto_it && !regIt.checked) { mostraErrore(null, 'Per un dominio .it spunta l\'accettazione delle regole del Registro .it.'); regIt.focus(); return; }
     if (!LINK) return;
     var rif = dom.replace(/\./g, '_');
     var vai = function(){ location.href = LINK + '?client_reference_id=' + encodeURIComponent(rif) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it'; };

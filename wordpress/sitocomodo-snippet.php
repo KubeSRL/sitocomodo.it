@@ -375,6 +375,7 @@ function sc_intestatario_pulito($d) {
         'indirizzo' => $v('indirizzo', 150), 'cap' => preg_replace('/\D/', '', $v('cap', 10)), 'citta' => $v('citta', 80),
         'provincia' => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $v('provincia', 5)), 0, 2)),
         'telefono' => preg_replace('/[^0-9+]/', '', $v('telefono', 30)), 'email' => sanitize_email((string) ($d['email'] ?? '')),
+        'registro_it' => !empty($d['registro_it']), 'whois' => ($t === 'privato' && !empty($d['whois'])),
         'salvato' => wp_date('d/m/Y H:i'),
     ];
     if ($t === 'societa') { $i['nome'] = $i['nome'] ?: ''; $i['cf'] = ''; }
@@ -402,6 +403,7 @@ function sc_intestatario_testo($i) {
     if (!empty($i['piva'])) $r[] = 'Partita IVA: ' . $i['piva'];
     $r[] = 'Indirizzo: ' . ($i['indirizzo'] ?? '') . ', ' . ($i['cap'] ?? '') . ' ' . ($i['citta'] ?? '') . ' (' . ($i['provincia'] ?? '') . ')';
     $r[] = 'Telefono: ' . ($i['telefono'] ?? '') . ' · Email: ' . ($i['email'] ?? '');
+    if (!empty($i['registro_it'])) $r[] = 'Regole del Registro .it: accettate' . (($i['tipo'] ?? '') === 'privato' ? ' · dati visibili nel Whois: ' . (!empty($i['whois']) ? 'sì' : 'no') : '');
     return implode("\n", $r);
 }
 
@@ -418,6 +420,7 @@ add_action('rest_api_init', function () {
             $i = sc_intestatario_pulito($d);
             $err = sc_intestatario_errore($i);
             if ($err !== '') return new WP_REST_Response(['ok' => false, 'errore' => 'Controlla i dati dell\'intestatario: ' . $err . '.'], 400);
+            if (substr($rif, -3) === '_it' && empty($i['registro_it'])) return new WP_REST_Response(['ok' => false, 'errore' => 'Per un dominio .it devi accettare le regole del Registro .it.'], 400);
             $ordini = sc_ordini_leggi();
             for ($k = count($ordini) - 1; $k >= 0; $k--) {
                 if (($ordini[$k]['riferimento_stripe'] ?? '') === $rif && ($ordini[$k]['stato'] ?? '') === 'in attesa di pagamento') {
@@ -434,6 +437,25 @@ add_action('rest_api_init', function () {
         },
     ]);
 });
+
+// risposte alle sezioni del modulo del Registro .it (il cliente le accetta al checkout; il Whois pubblico solo se lo sceglie)
+function sc_dichiarazioni_it($persona, $whois) {
+    if ($persona) return ['IT_SECT3_INDIVIDUAL' => 'Accept', 'IT_SECT4_INDIVIDUAL' => 'true', 'IT_SECT5_INDIVIDUAL' => $whois ? 'Accept' : 'Do not accept', 'IT_SECT6_INDIVIDUAL' => 'Accept'];
+    return ['IT_SECT3_OTHER' => 'Accept', 'IT_SECT4_OTHER' => 'true', 'IT_SECT5_OTHER' => 'Accept'];
+}
+
+// somma del credito prepagato OVH in euro, null se non si legge
+function sc_ovh_credito() {
+    $conti = sc_ovh('GET', '/me/ovhAccount');
+    if (is_wp_error($conti)) return null;
+    $tot = 0.0;
+    foreach ((array) $conti as $id) {
+        $c = sc_ovh('GET', '/me/ovhAccount/' . rawurlencode($id));
+        if (is_wp_error($c)) return null;
+        $tot += (float) ($c['balance']['value'] ?? 0);
+    }
+    return $tot;
+}
 
 // chiamata firmata alle API di OVH (Europa)
 function sc_ovh($metodo, $percorso, $corpo = null) {
@@ -500,6 +522,7 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
         if (empty($intestatario)) return $fine(false, 'da comprare a mano', 'mancano i dati dell\'intestatario');
         $e = sc_intestatario_errore($intestatario);
         if ($e !== '') return $fine(false, 'da comprare a mano', 'dati intestatario: ' . $e);
+        if (preg_match('/\.it$/', $dominio) && empty($intestatario['registro_it'])) return $fine(false, 'da comprare a mano', 'il cliente non ha accettato le regole del Registro .it');
     }
 
     $carrello = sc_ovh('POST', '/order/cart', ['ovhSubsidiary' => 'IT', 'description' => 'SitoComodo ' . $dominio]);
@@ -543,30 +566,17 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
         $req = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/item/' . rawurlencode($iid) . '/requiredConfiguration');
         if (!is_wp_error($req)) {
             $passi[] = 'configurazioni richieste: ' . implode(', ', array_map(function ($x) { return ($x['label'] ?? '?') . (!empty($x['required']) ? '*' : ''); }, (array) $req));
-            foreach ((array) $req as $x) { $passi[] = 'CONF ' . wp_json_encode($x, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); }
         }
-        $regole = sc_ovh('GET', '/domain/configurationRule?action=create&domain=' . rawurlencode($dominio));
-        if (is_wp_error($regole)) $passi[] = 'REGOLE ' . $regole->get_error_message();
-        else foreach ((array) ($regole['and'] ?? []) as $r) {
-            if (($r['label'] ?? '') === 'OWNER_CONTACT') continue;
-            $passi[] = 'REGOLA ' . ($r['label'] ?? '?') . ' | tipo ' . ($r['type'] ?? '?') . ' | vincoli ' . wp_json_encode($r['constraints'] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' | ' . substr((string) ($r['description'] ?? ''), 0, 4000);
-        }
-        // TEMP: verifica a vuoto (GET checkout non crea ordini) di quali dichiarazioni .it servono
+        // verifica a vuoto (GET checkout non crea ordini) con le dichiarazioni .it di un privato
         if (preg_match('/\.it$/', $dominio)) {
-            $prova_conf = function ($label, $valore) use ($cid, $iid, &$passi) {
+            $err_conf = '';
+            sc_ovh('POST', '/order/cart/' . rawurlencode($cid) . '/item/' . rawurlencode($iid) . '/configuration', ['label' => 'OWNER_LEGAL_AGE', 'value' => 'true']);
+            foreach (sc_dichiarazioni_it(true, false) as $label => $valore) {
                 $c = sc_ovh('POST', '/order/cart/' . rawurlencode($cid) . '/item/' . rawurlencode($iid) . '/configuration', ['label' => $label, 'value' => $valore]);
-                if (is_wp_error($c)) $passi[] = "TEST conf $label: " . $c->get_error_message();
-            };
-            $prova_check = function ($nome) use ($cid, &$passi) {
-                $k = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/checkout');
-                $passi[] = "TEST checkout $nome: " . (is_wp_error($k) ? 'ERRORE ' . $k->get_error_message() : 'ok ' . ($k['prices']['withTax']['text'] ?? ''));
-            };
-            $prova_check('senza niente');
-            $prova_conf('OWNER_LEGAL_AGE', 'true');
-            $prova_conf('IT_SECT3_INDIVIDUAL', 'Accept'); $prova_conf('IT_SECT4_INDIVIDUAL', 'true'); $prova_conf('IT_SECT5_INDIVIDUAL', 'Do not accept'); $prova_conf('IT_SECT6_INDIVIDUAL', 'Accept');
-            $prova_check('con INDIVIDUAL');
-            $prova_conf('IT_SECT3_OTHER', 'Accept'); $prova_conf('IT_SECT4_OTHER', 'true'); $prova_conf('IT_SECT5_OTHER', 'Accept');
-            $prova_check('con INDIVIDUAL e OTHER');
+                if (is_wp_error($c)) $err_conf .= ' ' . $label . ': ' . $c->get_error_message();
+            }
+            $k = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/checkout');
+            $passi[] = 'dichiarazioni Registro .it (verifica a vuoto): ' . (is_wp_error($k) ? 'ERRORE ' . $k->get_error_message() : 'accettate da OVH') . $err_conf;
         }
         $riepilogo = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/summary');
         if (!is_wp_error($riepilogo)) $passi[] = 'totale carrello IVA inclusa: ' . ($riepilogo['prices']['withTax']['text'] ?? '?');
@@ -584,10 +594,18 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
 
     $req = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/item/' . rawurlencode($iid) . '/requiredConfiguration');
     if (is_wp_error($req)) { $pulisci(); return $fine(false, 'errore', $req->get_error_message()); }
+    // dichiarazioni del Registro .it accettate dal cliente al checkout: OVH controlla solo la serie del tipo di intestatario
+    $persona = ($contatto['legalForm'] ?? '') === 'individual';
+    $dichiarazioni_it = sc_dichiarazioni_it($persona, !empty($intestatario['whois']));
     foreach ((array) $req as $conf) {
         $label = $conf['label'] ?? '';
         $valore = null;
-        if ($label === 'OWNER_CONTACT') $valore = '/me/contact/' . $nuovo['id'];
+        if (strpos($label, 'IT_SECT') === 0) {
+            if (strpos($label, $persona ? '_INDIVIDUAL' : '_OTHER') === false) continue;
+            if (!isset($dichiarazioni_it[$label])) { $pulisci(); return $fine(false, 'non comprato', 'il registro chiede un dato non previsto: ' . $label); }
+            $valore = $dichiarazioni_it[$label];
+        }
+        elseif ($label === 'OWNER_CONTACT') $valore = '/me/contact/' . $nuovo['id'];
         elseif ($label === 'OWNER_LEGAL_AGE' || $label === 'ACCEPT_CONDITIONS') $valore = 'true';
         elseif (in_array($label, ['ADMIN_ACCOUNT', 'TECH_ACCOUNT', 'DNS'], true)) continue;
         elseif (!empty($conf['required'])) { $pulisci(); return $fine(false, 'non comprato', 'il registro chiede un dato non previsto: ' . $label); }
@@ -602,6 +620,10 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
     $testo_prezzo = $controllo['prices']['withTax']['text'] ?? (number_format($prezzo, 2, ',', '.') . ' €');
     if ($prezzo > $tetto) { $pulisci(); return $fine(false, 'non comprato', "prezzo $testo_prezzo IVA inclusa, sopra il tetto di " . number_format($tetto, 2, ',', '.') . ' €'); }
     $passi[] = 'prezzo ' . $testo_prezzo . ' IVA inclusa';
+    $credito = sc_ovh_credito();
+    if ($credito === null) { $pulisci(); return $fine(false, 'non comprato', 'non riesco a leggere il credito prepagato OVH'); }
+    if ($credito + 0.001 < $prezzo) { $pulisci(); return $fine(false, 'non comprato', 'credito prepagato OVH insufficiente: ' . number_format($credito, 2, ',', '.') . ' €, ne servono ' . $testo_prezzo . '. Ricarica il credito e clicca «Riprova acquisto dominio».'); }
+    $passi[] = 'credito prepagato prima dell\'acquisto: ' . number_format($credito, 2, ',', '.') . ' €';
 
     $ordine = sc_ovh('POST', '/order/cart/' . rawurlencode($cid) . '/checkout', ['autoPayWithPreferredPaymentMethod' => false, 'waiveRetractationPeriod' => true]);
     if (is_wp_error($ordine) || empty($ordine['orderId'])) return $fine(false, 'non comprato', 'ordine OVH: ' . (is_wp_error($ordine) ? $ordine->get_error_message() : 'nessun numero d\'ordine'));
