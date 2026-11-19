@@ -54,6 +54,15 @@ add_action('template_redirect', function () {
     if ($est === 'woff2' || $est === 'woff') {
         header('Access-Control-Allow-Origin: *');
     }
+    // pagine: aggiunge il contatore anonimo della pagina «SitoComodo Live» (non per chi è collegato a WordPress)
+    if ($est === 'html' && !is_user_logged_in()) {
+        $html = (string) file_get_contents($file);
+        $pos = strripos($html, '</body>');
+        if ($pos !== false) $html = substr($html, 0, $pos) . sc_live_script() . substr($html, $pos);
+        header('Content-Length: ' . strlen($html));
+        echo $html;
+        exit;
+    }
     header('Content-Length: ' . filesize($file));
     readfile($file);
     exit;
@@ -797,4 +806,284 @@ function sc_pagina_ordini() {
         echo '</div>';
     }
     echo '</div>';
+}
+
+
+// ---------------------------------------------------------------- 5. «SitoComodo Live»: chi c'è sul sito adesso, carrelli abbandonati, ordini
+// Conteggio anonimo: niente cookie, niente dati salvati sul telefono del visitatore, niente IP. Ogni pagina aperta
+// genera un numero a caso che vive solo finché la pagina è aperta; il server tiene pagina, passo e provenienza generica.
+function sc_live_script() {
+    return '<script>(function(){try{if(navigator.webdriver)return;'
+        . 'var id=Math.random().toString(36).slice(2)+Date.now().toString(36),u="/wp-json/sitocomodo/v1/live",'
+        . 'q=new URLSearchParams(location.search),s=q.get("utm_source")||(q.has("fbclid")?"meta-ads":"");'
+        . 'if(!s&&document.referrer){try{var h=new URL(document.referrer).hostname;if(h!==location.hostname)s=h;}catch(e){}}'
+        . 'function m(e){var b=JSON.stringify({id:id,p:location.pathname,e:e,s:e==="vista"?s:""});'
+        . 'if(e==="via"&&navigator.sendBeacon){navigator.sendBeacon(u,new Blob([b],{type:"application/json"}));return;}'
+        . 'fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:b,keepalive:true}).catch(function(){});}'
+        . 'm("vista");setInterval(function(){if(document.visibilityState==="visible")m("ping");},20000);'
+        . 'document.addEventListener("visibilitychange",function(){m(document.visibilityState==="visible"?"ping":"via");});'
+        . 'addEventListener("pagehide",function(){m("via");});}catch(e){}})();</script>';
+}
+
+function sc_live_passi() {
+    return ['home' => 'Home', 'esempi' => 'Guarda gli esempi', 'dominio' => 'Sceglie il dominio', 'modulo' => 'Compila il modulo',
+            'pagamento' => 'Pagina di pagamento', 'pagato' => 'Ha pagato (pagina grazie)', 'altro' => 'Altre pagine'];
+}
+
+function sc_live_passo($percorso) {
+    $p = '/' . trim(strtolower((string) $percorso), '/') . '/';
+    if ($p === '//' ) return 'home';
+    if (strpos($p, '/esempi/') === 0) return 'esempi';
+    $mappa = ['/ordina/' => 'dominio', '/ordine/' => 'modulo', '/checkout/' => 'pagamento', '/grazie/' => 'pagato'];
+    return $mappa[$p] ?? 'altro';
+}
+
+function sc_live_fonte($s) {
+    $s = strtolower(trim((string) $s));
+    if ($s === '') return 'Diretto';
+    if ($s === 'meta-ads') return 'Inserzioni Meta';
+    if (strpos($s, 'instagram') !== false || $s === 'ig') return 'Instagram';
+    if (strpos($s, 'facebook') !== false || $s === 'fb') return 'Facebook';
+    if (strpos($s, 'google') !== false) return 'Google';
+    if (strpos($s, 'bing') !== false) return 'Bing';
+    if (strpos($s, 'whatsapp') !== false || strpos($s, 'wa.me') !== false) return 'WhatsApp';
+    if (strpos($s, 'tiktok') !== false) return 'TikTok';
+    return mb_substr(preg_replace('/^www\./', '', preg_replace('/[^a-z0-9.\-]/', '', $s)), 0, 40) ?: 'Altro';
+}
+
+// data/ora salvate negli ordini («19/11/2026 18:40» o con i secondi) → timestamp
+function sc_ts($testo) {
+    foreach (['d/m/Y H:i:s', 'd/m/Y H:i'] as $f) {
+        $d = DateTime::createFromFormat($f, (string) $testo, wp_timezone());
+        if ($d) return $d->getTimestamp();
+    }
+    return 0;
+}
+
+add_action('rest_api_init', function () {
+    // pubblico: riceve «vista», «ping» (ogni 20 secondi) e «via» dalle pagine del sito
+    register_rest_route('sitocomodo/v1', '/live', [
+        'methods' => 'POST',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            if (preg_match('/bot|crawl|spider|slurp|facebookexternalhit|lighthouse|headless|preview/i', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''))) return ['ok' => true];
+            $d = $r->get_json_params();
+            if (!is_array($d)) $d = json_decode((string) $r->get_body(), true);
+            if (!is_array($d)) return new WP_REST_Response(['ok' => false], 400);
+            $id = preg_replace('/[^a-z0-9]/', '', strtolower((string) ($d['id'] ?? '')));
+            $e = (string) ($d['e'] ?? '');
+            if ($id === '' || strlen($id) > 40 || !in_array($e, ['vista', 'ping', 'via'], true)) return new WP_REST_Response(['ok' => false], 400);
+            $passo = sc_live_passo(substr((string) ($d['p'] ?? '/'), 0, 200));
+            $ora = time();
+            $attivi = get_option('sc_live_attivi', []);
+            if (!is_array($attivi)) $attivi = [];
+            foreach ($attivi as $k => $a) if ($ora - (int) ($a['t'] ?? 0) > 60) unset($attivi[$k]);
+            if ($e === 'via') {
+                unset($attivi[$id]);
+            } elseif (isset($attivi[$id]) || count($attivi) < 500) {
+                $prima = $attivi[$id] ?? [];
+                $attivi[$id] = ['passo' => $passo, 't' => $ora, 'da' => (int) ($prima['da'] ?? $ora),
+                                'fonte' => $e === 'vista' ? sc_live_fonte($d['s'] ?? '') : ($prima['fonte'] ?? 'Diretto')];
+            }
+            update_option('sc_live_attivi', $attivi, false);
+            if ($e === 'vista') {
+                $giorni = get_option('sc_live_giorni', []);
+                if (!is_array($giorni)) $giorni = [];
+                $g = wp_date('Y-m-d');
+                $giorni[$g]['passi'][$passo] = (int) ($giorni[$g]['passi'][$passo] ?? 0) + 1;
+                $f = sc_live_fonte($d['s'] ?? '');
+                if ($passo === 'home' || $f !== 'Diretto') $giorni[$g]['fonti'][$f] = (int) ($giorni[$g]['fonti'][$f] ?? 0) + 1;
+                ksort($giorni);
+                update_option('sc_live_giorni', array_slice($giorni, -60, null, true), false);
+            }
+            return ['ok' => true];
+        },
+    ]);
+    // solo amministratore: i dati della pagina «SitoComodo Live»
+    register_rest_route('sitocomodo/v1', '/live-dati', [
+        'methods' => 'GET',
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function () { return sc_live_dati(); },
+    ]);
+});
+
+function sc_live_dati() {
+    $ora = time();
+    $passi = sc_live_passi();
+    $attivi = get_option('sc_live_attivi', []);
+    $adesso = array_fill_keys(array_keys($passi), 0);
+    $persone = [];
+    foreach ((is_array($attivi) ? $attivi : []) as $a) {
+        if ($ora - (int) ($a['t'] ?? 0) > 45) continue;
+        $p = $a['passo'] ?? 'altro';
+        $adesso[$p] = ($adesso[$p] ?? 0) + 1;
+        $persone[] = ['passo' => $passi[$p] ?? $p, 'chiave' => $p, 'minuti' => max(0, (int) floor(($ora - (int) ($a['da'] ?? $ora)) / 60)), 'fonte' => $a['fonte'] ?? ''];
+    }
+    $ordine_passi = array_flip(array_keys($passi));
+    usort($persone, function ($x, $y) use ($ordine_passi) { return ($ordine_passi[$y['chiave']] ?? 0) <=> ($ordine_passi[$x['chiave']] ?? 0); });
+
+    $giorni = get_option('sc_live_giorni', []);
+    $giorni = is_array($giorni) ? $giorni : [];
+    $oggi = wp_date('Y-m-d');
+    $settimana = [];
+    for ($i = 6; $i >= 0; $i--) {
+        $g = wp_date('Y-m-d', $ora - $i * DAY_IN_SECONDS);
+        $settimana[] = ['giorno' => wp_date('D j', $ora - $i * DAY_IN_SECONDS), 'passi' => $giorni[$g]['passi'] ?? new stdClass()];
+    }
+
+    $carrelli = [];
+    $pagati = [];
+    $pagati_oggi = 0;
+    $inizio_oggi = (new DateTime('today', wp_timezone()))->getTimestamp();
+    foreach (array_reverse(sc_ordini_leggi()) as $o) {
+        $stato = $o['stato'] ?? 'in attesa di pagamento';
+        $t = sc_ts($o['ricevuto'] ?? '');
+        if (strpos($stato, 'pagato') === 0) {
+            $tp = sc_ts($o['pagamento']['quando'] ?? '') ?: $t;
+            if ($tp >= $inizio_oggi) $pagati_oggi++;
+            if (count($pagati) < 10) $pagati[] = ['quando' => $o['pagamento']['quando'] ?? ($o['ricevuto'] ?? ''), 'nome' => $o['nome'] ?? '', 'dominio' => $o['dominio'] ?? '',
+                'importo' => $o['pagamento']['importo'] ?? '', 'dominio_ovh' => $o['dominio_acquisto']['stato'] ?? ''];
+            continue;
+        }
+        if ($t && $ora - $t > 14 * DAY_IN_SECONDS) continue;
+        if (count($carrelli) >= 30) continue;
+        $tint = sc_ts($o['intestatario']['salvato'] ?? '');
+        $carrelli[] = [
+            'quando' => $o['ricevuto'] ?? '', 'minuti' => $t ? (int) floor(($ora - $t) / 60) : null,
+            'nome' => $o['nome'] ?? '', 'tipo' => $o['tipo'] ?? '', 'dominio' => $o['dominio'] ?? '',
+            'telefono' => $o['telefono'] ?? '', 'whatsapp' => $o['whatsapp'] ?? '', 'email' => $o['email'] ?? ($o['intestatario']['email'] ?? ''),
+            'su_stripe' => $tint > 0, 'stripe_minuti' => $tint ? (int) floor(($ora - $tint) / 60) : null,
+        ];
+    }
+    usort($carrelli, function ($x, $y) { return ($x['minuti'] ?? PHP_INT_MAX) <=> ($y['minuti'] ?? PHP_INT_MAX); });
+    $su_stripe_ora = count(array_filter($carrelli, function ($c) { return $c['su_stripe'] && $c['stripe_minuti'] !== null && $c['stripe_minuti'] <= 30; }));
+
+    return [
+        'ora' => wp_date('H:i:s'),
+        'adesso' => ['totale' => count($persone), 'passi' => $adesso, 'persone' => $persone, 'su_stripe' => $su_stripe_ora],
+        'nomi_passi' => $passi,
+        'oggi' => ['passi' => $giorni[$oggi]['passi'] ?? new stdClass(), 'fonti' => $giorni[$oggi]['fonti'] ?? new stdClass(), 'pagati' => $pagati_oggi],
+        'settimana' => $settimana,
+        'carrelli' => $carrelli,
+        'pagati' => $pagati,
+    ];
+}
+
+add_action('admin_menu', function () {
+    add_menu_page('SitoComodo Live', 'SitoComodo Live', 'manage_options', 'sc-live', 'sc_pagina_live', 'dashicons-chart-line', 2);
+});
+
+function sc_pagina_live() {
+    $nonce = wp_create_nonce('wp_rest');
+    $url = esc_url_raw(rest_url('sitocomodo/v1/live-dati'));
+    $html = <<<'SC_LIVE_HTML'
+<div class="wrap sc-live">
+<style>
+.sc-live{max-width:980px}
+.sc-live h1{display:flex;align-items:center;gap:10px}
+.sc-live .agg{font-size:13px;color:#646970;font-weight:400}
+.sc-live .riga{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.sc-live .box{background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:16px}
+.sc-live .num{font-size:40px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.sc-live .lab{font-size:13px;color:#50575e;margin-top:4px}
+.sc-live .vivo{display:inline-block;width:10px;height:10px;border-radius:50%;background:#00a32a;margin-right:6px;animation:sc-pulsa 2s infinite}
+@keyframes sc-pulsa{0%{box-shadow:0 0 0 0 rgba(0,163,42,.5)}70%{box-shadow:0 0 0 10px rgba(0,163,42,0)}100%{box-shadow:0 0 0 0 rgba(0,163,42,0)}}
+@media (prefers-reduced-motion:reduce){.sc-live .vivo{animation:none}}
+.sc-live h2{margin:28px 0 10px;font-size:17px}
+.sc-live .imbuto div{display:grid;grid-template-columns:170px 1fr 48px;align-items:center;gap:10px;margin:6px 0;font-size:14px}
+.sc-live .barra{height:14px;background:#f0f0f1;border-radius:3px;overflow:hidden}
+.sc-live .barra i{display:block;height:100%;background:#2271b1}
+.sc-live .imbuto b{text-align:right;font-variant-numeric:tabular-nums}
+.sc-live .tab{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sc-live .stato{display:inline-block;white-space:nowrap;margin-top:3px;font-size:12px;padding:1px 6px;border-radius:3px;background:#f0f0f1;color:#50575e}
+.sc-live .stato.stripe{background:#fcf0d9;color:#8a5a00;font-weight:600}
+.sc-live table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #dcdcde}
+.sc-live th,.sc-live td{text-align:left;padding:9px 10px;border-bottom:1px solid #f0f0f1;font-size:14px;vertical-align:top}
+.sc-live th{font-weight:600;background:#f6f7f7}
+.sc-live td.n{text-align:right;font-variant-numeric:tabular-nums}
+.sc-live .vuoto{color:#646970;padding:12px;background:#fff;border:1px dashed #c3c4c7;border-radius:6px}
+.sc-live .persona{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;background:#fff;border:1px solid #dcdcde;border-radius:6px;margin:6px 0;font-size:14px}
+.sc-live .persona.caldo{border-color:#00a32a;background:#f0faf2}
+@media (max-width:600px){.sc-live .imbuto div{grid-template-columns:120px 1fr 36px}.sc-live .num{font-size:32px}.sc-live .nasc{display:none}}
+</style>
+<h1><span class="vivo" aria-hidden="true"></span>SitoComodo Live <span class="agg" id="sc-agg">collegamento…</span></h1>
+
+<div class="riga">
+  <div class="box"><div class="num" id="sc-ora">–</div><div class="lab">sul sito adesso</div></div>
+  <div class="box"><div class="num" id="sc-pag-ora">–</div><div class="lab">sulla pagina di pagamento adesso</div></div>
+  <div class="box"><div class="num" id="sc-stripe">–</div><div class="lab">andati a pagare su Stripe (ultimi 30 min), non ancora pagato</div></div>
+  <div class="box"><div class="num" id="sc-pagati">–</div><div class="lab">ordini pagati oggi</div></div>
+</div>
+
+<h2>Chi c'è adesso</h2>
+<div id="sc-persone"></div>
+
+<h2>Oggi, passo per passo</h2>
+<div class="box imbuto" id="sc-imbuto"></div>
+<p class="agg" id="sc-fonti"></p>
+
+<h2>Carrelli abbandonati</h2>
+<p class="agg">Hanno compilato il modulo ma non hanno pagato (ultimi 14 giorni). «Fermo su Stripe» vuol dire che sono arrivati alla pagina di pagamento di Stripe e non hanno finito.</p>
+<div id="sc-carrelli"></div>
+
+<h2>Ultimi ordini pagati</h2>
+<div id="sc-ordini"></div>
+
+<h2>Ultimi 7 giorni</h2>
+<div id="sc-settimana"></div>
+<p class="agg">Il conteggio è anonimo: niente cookie e niente dati personali dei visitatori. Le tue visite da collegato a WordPress non contano. La pagina si aggiorna da sola ogni 5 secondi.</p>
+</div>
+<script>
+(function(){
+  var URL_DATI = %%URL%%, NONCE = %%NONCE%%;
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  var tempo = function(m){ if (m == null) return ''; if (m < 1) return 'adesso'; if (m < 60) return m + ' min fa'; if (m < 1440) return Math.floor(m/60) + ' h fa'; return Math.floor(m/1440) + ' g fa'; };
+  var ORDINE = ['home','esempi','dominio','modulo','pagamento','pagato','altro'];
+  function disegna(d){
+    $('sc-agg').textContent = 'aggiornato alle ' + d.ora;
+    $('sc-ora').textContent = d.adesso.totale;
+    $('sc-pag-ora').textContent = d.adesso.passi.pagamento || 0;
+    $('sc-stripe').textContent = d.adesso.su_stripe;
+    $('sc-pagati').textContent = d.oggi.pagati;
+    $('sc-persone').innerHTML = d.adesso.persone.length ? d.adesso.persone.map(function(p){
+      var caldo = p.chiave === 'pagamento' || p.chiave === 'modulo';
+      return '<div class="persona' + (caldo ? ' caldo' : '') + '"><span><strong>' + esc(p.passo) + '</strong> · da ' + esc(p.fonte || 'Diretto') + '</span><span>' + (p.minuti < 1 ? 'appena arrivato' : 'sul sito da ' + p.minuti + ' min') + '</span></div>';
+    }).join('') : '<div class="vuoto">Nessuno sul sito in questo momento.</div>';
+    var oggi = d.oggi.passi || {}, max = 1;
+    ORDINE.forEach(function(k){ max = Math.max(max, oggi[k] || 0); });
+    $('sc-imbuto').innerHTML = ORDINE.map(function(k){
+      var v = oggi[k] || 0;
+      return '<div><span>' + esc(d.nomi_passi[k]) + '</span><span class="barra"><i style="width:' + Math.round(v / max * 100) + '%"></i></span><b>' + v + '</b></div>';
+    }).join('');
+    var f = d.oggi.fonti || {}, chiavi = Object.keys(f).sort(function(a,b){ return f[b] - f[a]; });
+    $('sc-fonti').textContent = chiavi.length ? 'Da dove arrivano oggi: ' + chiavi.map(function(k){ return k + ' ' + f[k]; }).join(' · ') : '';
+    $('sc-carrelli').innerHTML = d.carrelli.length ? '<div class="tab"><table><thead><tr><th>Quando</th><th>Attività</th><th>Dominio</th><th>Contatti</th></tr></thead><tbody>' + d.carrelli.map(function(c){
+      var tel = c.telefono || c.whatsapp, cont = [];
+      if (tel) cont.push('<a href="tel:' + esc(tel.replace(/[^0-9+]/g, '')) + '">' + esc(tel) + '</a>');
+      if (c.email) cont.push('<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>');
+      var fermo = c.su_stripe ? '<span class="stato stripe">Fermo su Stripe · ' + esc(tempo(c.stripe_minuti)) + '</span>' : '<span class="stato">Fermo dopo il modulo</span>';
+      return '<tr><td>' + esc(tempo(c.minuti)) + '</td><td><strong>' + esc(c.nome) + '</strong>' + (c.tipo ? '<br>' + esc(c.tipo) : '') + '<br>' + fermo + '</td><td>' + esc(c.dominio) + '</td><td>' + (cont.join('<br>') || '—') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="vuoto">Nessun carrello abbandonato.</div>';
+    $('sc-ordini').innerHTML = d.pagati.length ? '<div class="tab"><table><thead><tr><th>Pagato</th><th>Attività</th><th>Dominio</th><th class="n">Importo</th><th class="nasc">Dominio su OVH</th></tr></thead><tbody>' + d.pagati.map(function(o){
+      return '<tr><td>' + esc(o.quando) + '</td><td><strong>' + esc(o.nome) + '</strong></td><td>' + esc(o.dominio) + '</td><td class="n">' + esc(o.importo) + '</td><td class="nasc">' + esc(o.dominio_ovh || '—') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="vuoto">Ancora nessun ordine pagato.</div>';
+    $('sc-settimana').innerHTML = '<div class="tab"><table><thead><tr><th>Giorno</th><th class="n">Home</th><th class="n">Dominio</th><th class="n">Modulo</th><th class="n">Pagamento</th><th class="n">Pagato</th></tr></thead><tbody>' + d.settimana.map(function(g){
+      var p = g.passi || {};
+      return '<tr><td>' + esc(g.giorno) + '</td><td class="n">' + (p.home||0) + '</td><td class="n">' + (p.dominio||0) + '</td><td class="n">' + (p.modulo||0) + '</td><td class="n">' + (p.pagamento||0) + '</td><td class="n">' + (p.pagato||0) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+  function carica(){
+    fetch(URL_DATI, {headers: {'X-WP-Nonce': NONCE}, credentials: 'same-origin'})
+      .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(disegna)
+      .catch(function(e){ $('sc-agg').textContent = e.message === '403' || e.message === '401' ? 'sessione scaduta: ricarica la pagina' : 'connessione assente, riprovo…'; });
+  }
+  carica();
+  setInterval(function(){ if (document.visibilityState === 'visible') carica(); }, 5000);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') carica(); });
+})();
+</script>
+SC_LIVE_HTML;
+    echo str_replace(['%%URL%%', '%%NONCE%%'], [wp_json_encode($url), wp_json_encode($nonce)], $html);
 }
