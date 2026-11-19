@@ -546,7 +546,11 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
             foreach ((array) $req as $x) { $passi[] = 'CONF ' . wp_json_encode($x, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); }
         }
         $regole = sc_ovh('GET', '/domain/configurationRule?action=create&domain=' . rawurlencode($dominio));
-        $passi[] = 'REGOLE ' . (is_wp_error($regole) ? $regole->get_error_message() : substr(wp_json_encode($regole, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 6000));
+        if (is_wp_error($regole)) $passi[] = 'REGOLE ' . $regole->get_error_message();
+        else foreach ((array) ($regole['and'] ?? []) as $r) {
+            if (($r['label'] ?? '') === 'OWNER_CONTACT') continue;
+            $passi[] = 'REGOLA ' . ($r['label'] ?? '?') . ' | tipo ' . ($r['type'] ?? '?') . ' | vincoli ' . wp_json_encode($r['constraints'] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' | ' . substr((string) ($r['description'] ?? ''), 0, 4000);
+        }
         $riepilogo = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/summary');
         if (!is_wp_error($riepilogo)) $passi[] = 'totale carrello IVA inclusa: ' . ($riepilogo['prices']['withTax']['text'] ?? '?');
         $pulisci();
