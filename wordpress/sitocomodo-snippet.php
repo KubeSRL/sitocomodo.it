@@ -551,6 +551,23 @@ function sc_dominio_acquista($dominio, $intestatario, $prova = false) {
             if (($r['label'] ?? '') === 'OWNER_CONTACT') continue;
             $passi[] = 'REGOLA ' . ($r['label'] ?? '?') . ' | tipo ' . ($r['type'] ?? '?') . ' | vincoli ' . wp_json_encode($r['constraints'] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' | ' . substr((string) ($r['description'] ?? ''), 0, 4000);
         }
+        // TEMP: verifica a vuoto (GET checkout non crea ordini) di quali dichiarazioni .it servono
+        if (preg_match('/\.it$/', $dominio)) {
+            $prova_conf = function ($label, $valore) use ($cid, $iid, &$passi) {
+                $c = sc_ovh('POST', '/order/cart/' . rawurlencode($cid) . '/item/' . rawurlencode($iid) . '/configuration', ['label' => $label, 'value' => $valore]);
+                if (is_wp_error($c)) $passi[] = "TEST conf $label: " . $c->get_error_message();
+            };
+            $prova_check = function ($nome) use ($cid, &$passi) {
+                $k = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/checkout');
+                $passi[] = "TEST checkout $nome: " . (is_wp_error($k) ? 'ERRORE ' . $k->get_error_message() : 'ok ' . ($k['prices']['withTax']['text'] ?? ''));
+            };
+            $prova_check('senza niente');
+            $prova_conf('OWNER_LEGAL_AGE', 'true');
+            $prova_conf('IT_SECT3_INDIVIDUAL', 'Accept'); $prova_conf('IT_SECT4_INDIVIDUAL', 'true'); $prova_conf('IT_SECT5_INDIVIDUAL', 'Do not accept'); $prova_conf('IT_SECT6_INDIVIDUAL', 'Accept');
+            $prova_check('con INDIVIDUAL');
+            $prova_conf('IT_SECT3_OTHER', 'Accept'); $prova_conf('IT_SECT4_OTHER', 'true'); $prova_conf('IT_SECT5_OTHER', 'Accept');
+            $prova_check('con INDIVIDUAL e OTHER');
+        }
         $riepilogo = sc_ovh('GET', '/order/cart/' . rawurlencode($cid) . '/summary');
         if (!is_wp_error($riepilogo)) $passi[] = 'totale carrello IVA inclusa: ' . ($riepilogo['prices']['withTax']['text'] ?? '?');
         $pulisci();
