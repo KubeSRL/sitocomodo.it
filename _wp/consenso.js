@@ -12,6 +12,11 @@
     fbq('init', PIXEL);
     fbq('track', 'PageView');
     var p = location.pathname;
+    if (/\/ordina\/?$/.test(p)) fbq('track', 'ViewContent', {value: 99, currency: 'EUR', content_name: 'Sito vetrina'});
+    if (/\/ordine\/?$/.test(p)) {
+      var dom = ''; try { dom = (JSON.parse(localStorage.getItem('sitocomodo_ordine') || '{}').dominio) || ''; } catch(e) {}
+      if (dom || new URLSearchParams(location.search).get('dominio')) fbq('track', 'AddToCart', {value: 99, currency: 'EUR', content_name: 'Sito vetrina'});
+    }
     if (/\/checkout\/?$/.test(p)) fbq('track', 'InitiateCheckout', {value: 99, currency: 'EUR', content_name: 'Sito vetrina'});
     if (/\/grazie\/?$/.test(p)) {
       var sid = new URLSearchParams(location.search).get('session_id');
