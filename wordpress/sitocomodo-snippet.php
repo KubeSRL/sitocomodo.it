@@ -32,6 +32,12 @@ add_action('template_redirect', function () {
     if (preg_match('#^/(wp-admin|wp-json|wp-content|wp-includes|wp-login)#', $percorso) || strpos($percorso, '..') !== false) {
         return;
     }
+    if ($percorso === '/' . SC_INDEXNOW_KEY . '.txt') {
+        status_header(200);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo SC_INDEXNOW_KEY;
+        exit;
+    }
     $base = sc_cartella_sito();
     $file = $base . $percorso;
     if (substr($percorso, -1) === '/' || is_dir($file)) {
@@ -93,10 +99,43 @@ add_action('rest_api_init', function () {
             if (!@move_uploaded_file($f['file']['tmp_name'], $dest)) {
                 return new WP_Error('salva', 'impossibile salvare', ['status' => 500]);
             }
-            return ['ok' => true, 'percorso' => $percorso, 'byte' => filesize($dest)];
+            $indexnow = null;
+            if ($est === 'html' && stripos((string) file_get_contents($dest), 'noindex') === false) {
+                $indexnow = sc_indexnow([home_url('/' . preg_replace('#index\.html$#', '', $percorso))]);
+            }
+            return ['ok' => true, 'percorso' => $percorso, 'byte' => filesize($dest), 'indexnow' => $indexnow];
+        },
+    ]);
+    // invio manuale a IndexNow (solo amministratore)
+    register_rest_route('sitocomodo/v1', '/indexnow', [
+        'methods' => 'POST',
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function (WP_REST_Request $r) {
+            $urls = array_values(array_filter(array_map('esc_url_raw', (array) $r->get_param('urls')), function ($u) {
+                return strpos($u, home_url('/')) === 0;
+            }));
+            if (!$urls) return new WP_Error('urls', 'nessun indirizzo del sito', ['status' => 400]);
+            return sc_indexnow($urls);
         },
     ]);
 });
+
+// IndexNow: avvisa subito Bing (e gli altri motori che lo usano) quando una pagina pubblica cambia.
+// La chiave è pubblica per costruzione: il file https://sitocomodo.it/<chiave>.txt la mostra.
+define('SC_INDEXNOW_KEY', '4175b0a1b7e6e255692cbce39b823ca4');
+function sc_indexnow(array $urls) {
+    $host = (string) parse_url(home_url('/'), PHP_URL_HOST);
+    $r = wp_remote_post('https://api.indexnow.org/indexnow', [
+        'timeout' => 10,
+        'headers' => ['Content-Type' => 'application/json; charset=utf-8'],
+        'body' => wp_json_encode(['host' => $host, 'key' => SC_INDEXNOW_KEY, 'keyLocation' => home_url('/' . SC_INDEXNOW_KEY . '.txt'), 'urlList' => array_values($urls)]),
+    ]);
+    $esito = ['quando' => wp_date('d/m/Y H:i'), 'urls' => array_values($urls),
+              'codice' => is_wp_error($r) ? 0 : (int) wp_remote_retrieve_response_code($r),
+              'errore' => is_wp_error($r) ? $r->get_error_message() : substr((string) wp_remote_retrieve_body($r), 0, 300)];
+    update_option('sc_indexnow_ultimo', $esito, false);
+    return $esito;
+}
 
 // ---------------------------------------------------------------- 2. ordini
 // Il modulo salva l'ordine «in attesa di pagamento» (nessuna email).
