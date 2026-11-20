@@ -10,7 +10,7 @@ Contatti: info@sitocomodo.it
 ## Domande frequenti
 
 - Cos'è un sito vetrina? È un sito di poche pagine che presenta la tua attività: chi sei, cosa offri, prezzi, orari, dove sei e come contattarti. Non vende online come un e-commerce: serve a farti trovare su Google e a farti chiamare o scrivere su WhatsApp.
-- Quanto costa un sito vetrina con SitoComodo? 99 € IVA inclusa, una volta sola: niente abbonamenti. Dentro ci sono il sito fino a 3 pagine (home, servizi e contatti), i testi scritti per te, il dominio a tuo nome e l'hosting per il primo anno. Dal secondo anno paghi solo il rinnovo di dominio e hosting: 29 € + IVA all'anno.
+- Quanto costa un sito vetrina con SitoComodo? 99 € IVA inclusa. Dentro ci sono il sito fino a 3 pagine (home, servizi e contatti), i testi scritti per te, il dominio a tuo nome e l'hosting per il primo anno. Dal secondo anno paghi solo il rinnovo di dominio e hosting: 29 € + IVA all'anno.
 - Il mio sito si troverà su Google? Ogni sito nasce pronto per Google: titoli e descrizioni curati, mappa del sito, indirizzo, orari e servizi scritti nel modo che Google legge, foto leggere che si aprono in fretta anche dal telefono. Per le ricerche nella tua zona conta molto anche la scheda Google della tua attività: se ce l'hai, la colleghiamo al sito. Prima di consegnarlo lo controlliamo con Lighthouse, lo strumento di Google per la qualità dei siti: i nostri modelli prendono 100 su 100 nella SEO.
 - Posso vedere qualche esempio? Sì: qui sopra trovi cinque modelli veri, da aprire anche dal telefono. Il tuo avrà le tue foto, i tuoi testi, il tuo colore e il carattere che scegli tra tre.
 - Devo alzarmi dal divano? Solo per fare due foto alla tua attività. Poi puoi tornare giù: al resto pensiamo noi.
