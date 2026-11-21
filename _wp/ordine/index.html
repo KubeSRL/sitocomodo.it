@@ -39,6 +39,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
 .scheda{flex:999 1 560px;min-width:0;background:#FFFFFF;border:2px solid #111827;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:28px}
 h1{margin:0 0 10px;font-size:clamp(32px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em}
 .intro{margin:0;font-size:18px;line-height:1.55;color:#374151}
+.offerta{display:inline-block;margin:4px 0 16px;padding:8px 14px;background:#FEF3C7;border:2px solid #111827;border-radius:12px;font-weight:700;font-size:17px;line-height:1.45;color:#111827}
 .corpo.stretto{max-width:860px}
 .corpo.stretto>.scheda{flex-basis:100%}
 .lato{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px}
@@ -98,6 +99,16 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 .invia{min-height:60px;border:2px solid #111827;border-radius:18px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:19px;font-weight:700;cursor:pointer;box-shadow:5px 5px 0 #111827}
 .invia:hover{background:#1E40AF}
 [aria-invalid=true]{border-color:#B91C1C!important}
+.altro{border:2px solid #9CA3AF;border-radius:16px;background:#FFFFFF}
+.altro>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:12px 18px;font-weight:700;font-size:18px}
+.altro>summary::-webkit-details-marker{display:none}
+.altro>summary::after{content:"+";flex:none;font-size:26px;line-height:1;font-weight:600}
+.altro[open]>summary::after{content:"\2013"}
+.altro>summary:focus-visible{outline:3px solid #F97316;outline-offset:2px;border-radius:14px}
+.altro .fac{display:block;font-size:14px;font-weight:600;color:#4B5563}
+.dentro-altro{display:flex;flex-direction:column;gap:16px;padding:0 18px 20px}
+.dentro-altro>.aiuto{margin:0}
+.dentro-altro h3{margin:10px 0 0;font-size:17px}
 @media (max-width:640px){
   legend{font-size:20px}
   .scelta{flex-basis:100%}
@@ -118,7 +129,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <form id="modulo" class="scheda" novalidate>
 <div>
 <h1>Raccontaci la tua attività.</h1>
-<p class="intro">Ci vogliono 5 minuti. Dopo il pagamento il tuo sito è online entro 30 minuti. Tu nel frattempo mettiti comodo.</p>
+<p class="intro">Bastano pochi minuti. Dopo il pagamento il tuo sito è online entro 30 minuti. Tu nel frattempo mettiti comodo.</p>
 </div>
 
 <fieldset>
@@ -131,16 +142,6 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <label for="tipo">Che attività è</label>
 <input id="tipo" name="tipo" type="text" placeholder="Es. pizzeria, idraulico, parrucchiera" required maxlength="80">
 </div>
-<div class="campo">
-<label for="chi">Chi siete</label>
-<textarea id="chi" name="chi" rows="3" placeholder="Es. Siamo una pizzeria di famiglia dal 1987, l'impasto riposa 48 ore e il forno a legna è acceso tutte le sere." aria-describedby="chi-nota" required></textarea>
-<span id="chi-nota" class="aiuto">Due o tre righe con il concetto che vuoi far passare: da quanto lavorate, cosa vi distingue, come lavorate. Scrivi come parli: il testo per il sito lo scriviamo noi partendo da qui.</span>
-</div>
-<div class="campo">
-<label for="servizi">Cosa offri</label>
-<textarea id="servizi" name="servizi" rows="5" placeholder="Margherita – 7 €&#10;Crudo e rucola – 10 €&#10;Fritti della casa – da 4 €" aria-describedby="servizi-nota" required></textarea>
-<span id="servizi-nota" class="aiuto">Un servizio o prodotto per riga, con il prezzo se vuoi mostrarlo. Diventano le schede del sito.</span>
-</div>
 </fieldset>
 
 <fieldset>
@@ -151,14 +152,44 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <input id="telefono" name="telefono" type="tel" required autocomplete="tel">
 </div>
 <div class="campo">
-<label for="whatsapp">WhatsApp</label>
-<input id="whatsapp" name="whatsapp" type="tel" placeholder="Se diverso dal telefono">
-</div>
-</div>
-<div class="riga2">
-<div class="campo">
 <label for="email">Email per i contatti</label>
 <input id="email" name="email" type="email" required autocomplete="email">
+</div>
+</div>
+</fieldset>
+
+<fieldset>
+<legend>3. Le tue foto</legend>
+<div class="campo carica">
+<label for="foto">Foto (da 1 a 6)</label>
+<input id="foto" name="foto[]" type="file" accept="image/*" multiple required>
+<span class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
+<span class="scelti" id="foto-scelte" aria-live="polite"></span>
+</div>
+</fieldset>
+
+<details class="altro" id="altro">
+<summary><span>Vuoi aggiungere altro? <span class="fac">Facoltativo</span></span></summary>
+<div class="dentro-altro">
+<p class="aiuto">Se lasci vuoto, ci pensiamo noi: i testi li scriviamo partendo dal tipo di attività, modello e carattere li scegliamo noi.</p>
+
+<h3>Testi</h3>
+<div class="campo">
+<label for="chi">Chi siete</label>
+<textarea id="chi" name="chi" rows="3" placeholder="Es. Siamo una pizzeria di famiglia dal 1987, l'impasto riposa 48 ore e il forno a legna è acceso tutte le sere." aria-describedby="chi-nota"></textarea>
+<span id="chi-nota" class="aiuto">Due o tre righe con il concetto che vuoi far passare: da quanto lavorate, cosa vi distingue, come lavorate. Scrivi come parli.</span>
+</div>
+<div class="campo">
+<label for="servizi">Cosa offri</label>
+<textarea id="servizi" name="servizi" rows="5" placeholder="Margherita – 7 €&#10;Crudo e rucola – 10 €&#10;Fritti della casa – da 4 €" aria-describedby="servizi-nota"></textarea>
+<span id="servizi-nota" class="aiuto">Un servizio o prodotto per riga, con il prezzo se vuoi mostrarlo. Diventano le schede del sito.</span>
+</div>
+
+<h3>Altri contatti</h3>
+<div class="riga2">
+<div class="campo">
+<label for="whatsapp">WhatsApp</label>
+<input id="whatsapp" name="whatsapp" type="tel" placeholder="Se diverso dal telefono">
 </div>
 <div class="campo">
 <label for="indirizzo">Indirizzo</label>
@@ -169,37 +200,19 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <label for="orari">Orari</label>
 <textarea id="orari" name="orari" rows="2" placeholder="Es. lun–sab 9–13 e 16–20"></textarea>
 </div>
-</fieldset>
 
-<fieldset>
-<legend>3. Logo e foto</legend>
-<div class="riga2">
+<h3>Logo e aspetto del sito</h3>
 <div class="campo carica">
 <label for="logo">Logo</label>
 <input id="logo" name="logo" type="file" accept="image/*">
 <span class="aiuto">Non ce l'hai? Scriviamo il nome con un carattere elegante.</span>
 </div>
-<div class="campo carica">
-<label for="foto">Foto (fino a 6)</label>
-<input id="foto" name="foto[]" type="file" accept="image/*" multiple required>
-<span class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
-<span class="scelti" id="foto-scelte" aria-live="polite"></span>
-</div>
-</div>
-<div id="box-verticale" class="campo carica verticale">
-<label for="foto-telefono">Una foto in verticale per il telefono</label>
-<input id="foto-telefono" name="foto_telefono" type="file" accept="image/*">
-<span class="aiuto">Con il modello <span id="nome-modello">Riquadro</span> la foto in alto, sul telefono, è verticale. Mandacene una scattata in verticale (anche diversa da quella per il computer), così sul telefono viene perfetta.</span>
-</div>
-</fieldset>
 
-<fieldset>
-<legend>4. Modello e carattere</legend>
 <div role="radiogroup" aria-labelledby="t-modello" class="gruppo">
 <p id="t-modello" class="etichetta-gruppo">Modello</p>
 <div class="scelte">
 <label class="scelta">
-<input type="radio" name="modello" value="tavola" data-nome="Riquadro" checked>
+<input type="radio" name="modello" value="tavola" data-nome="Riquadro">
 <span class="titolo-scelta">Riquadro</span>
 <span class="aiuto">Titolo dentro una grande foto, proposte in schede con foto e prezzo.</span>
 <a href="../esempi/pizzeriadamario/" target="_blank" rel="noopener">Guarda l'esempio</a>
@@ -230,11 +243,16 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </label>
 </div>
 </div>
+<div id="box-verticale" class="campo carica verticale">
+<label for="foto-telefono">Una foto in verticale per il telefono</label>
+<input id="foto-telefono" name="foto_telefono" type="file" accept="image/*">
+<span class="aiuto">Con il modello <span id="nome-modello">Riquadro</span> la foto in alto, sul telefono, è verticale. Mandacene una scattata in verticale (anche diversa da quella per il computer), così sul telefono viene perfetta.</span>
+</div>
 <div role="radiogroup" aria-labelledby="t-carattere" class="gruppo">
 <p id="t-carattere" class="etichetta-gruppo">Carattere dei titoli</p>
 <div class="scelte">
 <label class="scelta">
-<input type="radio" name="carattere" value="moderno" data-nome="Moderno" checked>
+<input type="radio" name="carattere" value="moderno" data-nome="Moderno">
 <span class="campione" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800">Il tuo nome</span>
 <span class="titolo-scelta">Moderno</span>
 <span class="aiuto">Rotondo e amichevole</span>
@@ -253,10 +271,8 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </label>
 </div>
 </div>
-</fieldset>
 
-<fieldset>
-<legend>5. Facoltativo</legend>
+<h3>Altro</h3>
 <div class="riga2">
 <div class="campo">
 <label for="colori">Colori preferiti</label>
@@ -272,7 +288,8 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <input id="google" name="google" type="url" placeholder="Il link della tua attività su Google Maps" aria-describedby="google-nota">
 <span id="google-nota" class="aiuto">Se ce l'hai, la colleghiamo al sito: aiuta Google a capire che sito e scheda sono della stessa attività.</span>
 </div>
-</fieldset>
+</div>
+</details>
 
 <div class="conferma">
 <input id="diritti" name="diritti" type="checkbox" required>
@@ -312,6 +329,9 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     var r = form.querySelector('input[name=' + k + '][value="' + o[k] + '"]'); if (r) r.checked = true;
   });
 
+  var altro = document.getElementById('altro');
+  if (['chi', 'servizi', 'whatsapp', 'indirizzo', 'orari', 'colori', 'social', 'google'].some(function(k){ return o[k]; })
+      || (o.modello && o.modello !== 'nostro') || (o.carattere && o.carattere !== 'nostro')) altro.open = true;
   var box = document.getElementById('box-verticale'), nomeMod = document.getElementById('nome-modello');
   function verticale(){
     var m = form.querySelector('input[name=modello]:checked');
@@ -337,12 +357,12 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
       if (!el.willValidate) return;
       if (el.checkValidity()) el.removeAttribute('aria-invalid'); else { el.setAttribute('aria-invalid', 'true'); if (!primo) primo = el; }
     });
-    if (primo) { primo.focus(); primo.reportValidity(); return; }
+    if (primo) { if (primo.closest('details')) primo.closest('details').open = true; primo.focus(); primo.reportValidity(); return; }
     var d = leggi();
     TESTI.forEach(function(k){ d[k] = document.getElementById(k).value.trim(); });
     var m = form.querySelector('input[name=modello]:checked'), c = form.querySelector('input[name=carattere]:checked');
-    d.modello = m.value; d.modello_nome = m.getAttribute('data-nome');
-    d.carattere = c.value; d.carattere_nome = c.getAttribute('data-nome');
+    d.modello = m ? m.value : 'nostro'; d.modello_nome = m ? m.getAttribute('data-nome') : 'Lo scegliamo noi';
+    d.carattere = c ? c.value : 'nostro'; d.carattere_nome = c ? c.getAttribute('data-nome') : 'Lo scegliamo noi';
     d.foto = foto.files.length; d.dominio = dom; d.quando = Date.now();
     scrivi(d);
     if (!INVIO) { location.href = '../checkout/'; return; }

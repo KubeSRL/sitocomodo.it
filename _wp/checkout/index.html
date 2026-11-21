@@ -233,13 +233,15 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
   });
   var o = leggi(), dom = pulito(o.dominio);
   document.getElementById('dom-riep').textContent = dom || '—';
-  if (o.nome) document.getElementById('riep-sito').textContent = o.nome + (o.modello_nome ? ' · modello ' + o.modello_nome : '');
+  if (o.nome) document.getElementById('riep-sito').textContent = o.nome + (o.modello_nome && o.modello !== 'nostro' ? ' · modello ' + o.modello_nome : '');
 
   var email = document.getElementById('email'), errMail = document.getElementById('errore-email'), form = document.getElementById('cassa');
   var manca = document.getElementById('manca');
   document.getElementById('r-dominio').textContent = dom || '—';
   document.getElementById('r-attivita').textContent = o.nome ? o.nome + (o.tipo ? ' · ' + o.tipo : '') : '—';
-  document.getElementById('r-modello').textContent = o.modello_nome ? o.modello_nome + ', carattere ' + (o.carattere_nome || '').toLowerCase() : '—';
+  document.getElementById('r-modello').textContent = !o.modello_nome ? '—'
+    : (o.modello === 'nostro' && o.carattere === 'nostro') ? 'Li scegliamo noi'
+    : (o.modello === 'nostro' ? 'Scelto da noi' : o.modello_nome) + ', carattere ' + (o.carattere === 'nostro' ? 'scelto da noi' : (o.carattere_nome || '').toLowerCase());
   if (!email.value) email.value = o.email_cliente || o.email || '';
   var pronto = !!(dom && o.nome && o.modello);
   manca.hidden = pronto;
