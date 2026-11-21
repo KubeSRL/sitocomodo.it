@@ -159,12 +159,12 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </fieldset>
 
 <fieldset>
-<legend>3. Le tue foto</legend>
+<legend>3. Il tuo logo</legend>
 <div class="campo carica">
-<label for="foto">Foto (da 1 a 6)</label>
-<input id="foto" name="foto[]" type="file" accept="image/*" multiple required>
-<span class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
-<span class="scelti" id="foto-scelte" aria-live="polite"></span>
+<label for="logo">Logo</label>
+<input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required>
+<span class="aiuto">Un file PNG o JPG. Va bene anche una foto del logo fatta con il telefono.</span>
+<span class="scelti" id="logo-scelto" aria-live="polite"></span>
 </div>
 </fieldset>
 
@@ -201,11 +201,12 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <textarea id="orari" name="orari" rows="2" placeholder="Es. lun–sab 9–13 e 16–20"></textarea>
 </div>
 
-<h3>Logo e aspetto del sito</h3>
+<h3>Foto e aspetto del sito</h3>
 <div class="campo carica">
-<label for="logo">Logo</label>
-<input id="logo" name="logo" type="file" accept="image/*">
-<span class="aiuto">Non ce l'hai? Scriviamo il nome con un carattere elegante.</span>
+<label for="foto">Foto (fino a 6)</label>
+<input id="foto" name="foto[]" type="file" accept="image/*" multiple>
+<span class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
+<span class="scelti" id="foto-scelte" aria-live="polite"></span>
 </div>
 
 <div role="radiogroup" aria-labelledby="t-modello" class="gruppo">
@@ -347,6 +348,8 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     foto.setCustomValidity(n > 6 ? 'Puoi caricare al massimo 6 foto: scegli le migliori.' : '');
     scelte.textContent = n ? (n === 1 ? '1 foto scelta' : n + ' foto scelte') : '';
   });
+  var logo = document.getElementById('logo'), logoScelto = document.getElementById('logo-scelto');
+  logo.addEventListener('change', function(){ logoScelto.textContent = logo.files.length ? 'Logo scelto: ' + logo.files[0].name : ''; });
 
   form.addEventListener('input', function(e){ if (e.target.checkValidity && e.target.checkValidity()) e.target.removeAttribute('aria-invalid'); });
   form.addEventListener('submit', function(e){
@@ -400,7 +403,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   }
   function invia(d){
     var btn = form.querySelector('button.invia'), testo = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Carico le foto\u2026'; erroreInvio.hidden = true;
+    btn.disabled = true; btn.textContent = 'Carico i file\u2026'; erroreInvio.hidden = true;
     var gruppi = [[document.getElementById('foto'), false], [document.getElementById('logo'), true], [document.getElementById('foto-telefono'), false]];
     Promise.all(gruppi.map(function(g){ return Promise.all(Array.prototype.map.call(g[0].files, function(f){ return rimpicciolisci(f, g[1]); })); }))
     .then(function(liste){
