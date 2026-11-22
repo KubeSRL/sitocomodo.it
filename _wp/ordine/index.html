@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Raccontaci la tua attività – SitoComodo</title>
+<title>Logo e la tua attività – SitoComodo</title>
 <meta name="theme-color" content="#FDE047">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -15,9 +15,6 @@
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
 @font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
-@font-face{font-family:"Bricolage Grotesque";src:url("../fonts/bricolage-grotesque-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
-@font-face{font-family:"DM Serif Display";src:url("../fonts/dm-serif-display-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
-@font-face{font-family:"Barlow Condensed";src:url("../fonts/barlow-condensed-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;font-family:Inter,system-ui,sans-serif;color:#111827;background:#EEF4FF;-webkit-text-size-adjust:100%}
@@ -68,6 +65,14 @@ dd a{display:block;font-size:14px;font-weight:600}
   .riepilogo{padding:22px;box-shadow:4px 4px 0 #111827}
   .nota{padding:20px}
 }
+/* 22/11/2026: pezzi comuni ai passaggi 1 e 2-3, nello stesso stile */
+.invia{min-height:60px;width:100%;border:2px solid #111827;border-radius:18px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:19px;font-weight:700;cursor:pointer;box-shadow:5px 5px 0 #111827}
+.invia:hover{background:#1E40AF}
+.invia[aria-disabled=true],.invia:disabled{background:#E5E7EB;color:#4B5563;border-color:#9CA3AF;box-shadow:none;cursor:default}
+.errore-invio{margin:0;padding:12px 14px;border-radius:12px;background:#FEE2E2;color:#991B1B;font-weight:600}
+.indietro{align-self:flex-start;font-weight:600;padding:10px 0}
+.avanti{display:flex;flex-direction:column;gap:12px;padding-top:24px;border-top:2px solid #E5E7EB;scroll-margin-top:16px}
+@media (max-width:640px){.invia{box-shadow:4px 4px 0 #111827}}
 
 .errore-invio{margin:0;padding:12px 14px;border-radius:12px;background:#FEE2E2;color:#991B1B;font-weight:600}
 fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:16px}
@@ -114,26 +119,57 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   .scelta{flex-basis:100%}
   .invia{box-shadow:4px 4px 0 #111827}
 }
+#modulo{display:flex;flex-direction:column;gap:28px}
+.scelta-fatta{margin:12px 0 0;font-size:15px;color:#374151}
+.scelta-fatta:empty{display:none}
+.nota-asterisco{font-size:13px}
+
+.avanti{display:flex;flex-direction:column;gap:10px;padding-top:24px;border-top:2px solid #E5E7EB;scroll-margin-top:16px}
+.nota-asterisco{font-size:13px}
+.cerca{display:flex;flex-wrap:wrap;gap:8px;background:#FFFFFF;border:2px solid #111827;border-radius:20px;padding:8px;box-shadow:6px 6px 0 #111827}
+.cerca input{flex:1 1 220px;min-width:0;min-height:56px;border:0;background:transparent;font:inherit;font-size:19px;padding:0 14px;color:#111827}
+.cerca button{flex:0 0 auto;min-height:56px;padding:0 28px;border:0;border-radius:14px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
+.esiti{display:flex;flex-direction:column;gap:12px}
+.intestazione{margin:0;font-size:15px;color:#4B5563}
+.risultati{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.riga{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:18px 20px;border-radius:18px;background:#FFFFFF;border:2px solid #111827}
+.riga.preso,.riga.attesa{background:#F9FAFB;border-color:#D1D5DB}
+.riga.scelta{background:#EEF4FF;border:3px solid #111827;padding:17px 19px}
+.riga .nome{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 240px}
+.riga .dom{font-weight:700;font-size:20px;overflow-wrap:anywhere}
+.etichetta{align-self:flex-start;background:#FED7AA;border:2px solid #111827;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+.stato{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:15px;font-weight:600;color:#4B5563}
+.riga.libero .stato{color:#166534}
+.riga button{min-height:48px;min-width:110px;padding:0 20px;border-radius:14px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;border:2px solid #111827;background:#FFFFFF;color:#111827}
+.riga.scelta button{background:#1D4ED8;color:#FFFFFF}
+@media (max-width:640px){
+  .cerca{box-shadow:4px 4px 0 #111827}
+  .cerca button{flex:1 1 100%}
+  .riga{padding:14px 16px}.riga.scelta{padding:13px 15px}
+  .riga .dom{font-size:18px}
+}
 </style>
 </head>
 <body>
 <header class="testata"><div>
 <a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
-<ol class="passi" aria-label="Passaggi dell'ordine">
-<li class="fatto">1. Dominio</li>
-<li aria-current="step">2. Raccontaci di te</li>
-<li>3. Pagamento</li>
+<ol class="passi" id="passi" aria-label="In 3 passaggi hai il tuo sito">
+<li class="fatto" data-passo="1"><span>1. Scegli il sito</span></li>
+<li aria-current="step" data-passo="2"><span>2. Logo e attività</span></li>
+<li data-passo="3"><span>3. Dominio e pagamento</span></li>
 </ol>
 </div></header>
 <div class="corpo stretto">
-<form id="modulo" class="scheda" novalidate>
+<main class="scheda" id="passo2">
+<form id="modulo" novalidate>
 <div>
-<h1>Raccontaci la tua attività.</h1>
-<p class="intro">Bastano pochi minuti. Dopo il pagamento il tuo sito è online entro 30 minuti. Tu nel frattempo mettiti comodo.</p>
+<h1>Mandaci il logo e due informazioni</h1>
+<p class="intro">Bastano nome, telefono, email e il logo: i testi li scriviamo noi partendo dalla tua attività. Il resto è facoltativo.</p>
+<p class="scelta-fatta" id="scelta-fatta"></p>
 </div>
 
 <fieldset>
-<legend>1. La tua attività</legend>
+<legend>La tua attività</legend>
 <div class="campo">
 <label for="nome">Nome dell'attività</label>
 <input id="nome" name="nome" type="text" placeholder="Es. Pizzeria da Mario" required autocomplete="organization" maxlength="80">
@@ -145,7 +181,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </fieldset>
 
 <fieldset>
-<legend>2. Come ti trovano</legend>
+<legend>Come ti trovano</legend>
 <div class="riga2">
 <div class="campo">
 <label for="telefono">Telefono</label>
@@ -159,7 +195,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </fieldset>
 
 <fieldset>
-<legend>3. Il tuo logo</legend>
+<legend>Il tuo logo</legend>
 <div class="campo carica">
 <label for="logo">Logo</label>
 <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required>
@@ -171,13 +207,13 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <details class="altro" id="altro">
 <summary><span>Vuoi aggiungere altro? <span class="fac">Facoltativo</span></span></summary>
 <div class="dentro-altro">
-<p class="aiuto">Se lasci vuoto, ci pensiamo noi: i testi li scriviamo partendo dal tipo di attività, modello e carattere li scegliamo noi.</p>
+<p class="aiuto">Se lasci vuoto, ci pensiamo noi: i testi li scriviamo partendo dal tipo di attività.</p>
 
 <h3>Testi</h3>
 <div class="campo">
 <label for="chi">Chi siete</label>
-<textarea id="chi" name="chi" rows="3" placeholder="Es. Siamo una pizzeria di famiglia dal 1987, l'impasto riposa 48 ore e il forno a legna è acceso tutte le sere." aria-describedby="chi-nota"></textarea>
-<span id="chi-nota" class="aiuto">Due o tre righe con il concetto che vuoi far passare: da quanto lavorate, cosa vi distingue, come lavorate. Scrivi come parli.</span>
+<textarea id="chi" name="chi" rows="3" placeholder="Es. Pizzeria di famiglia: l'impasto riposa 48 ore e il forno a legna è acceso tutte le sere." aria-describedby="chi-nota"></textarea>
+<span id="chi-nota" class="aiuto">Due o tre righe con il concetto che vuoi far passare: cosa vi distingue, come lavorate. Scrivi come parli.</span>
 </div>
 <div class="campo">
 <label for="servizi">Cosa offri</label>
@@ -201,76 +237,17 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <textarea id="orari" name="orari" rows="2" placeholder="Es. lun–sab 9–13 e 16–20"></textarea>
 </div>
 
-<h3>Foto e aspetto del sito</h3>
+<h3>Foto</h3>
 <div class="campo carica">
 <label for="foto">Foto (fino a 6)</label>
 <input id="foto" name="foto[]" type="file" accept="image/*" multiple>
 <span class="aiuto">Locale, prodotti, lavori fatti: anche dal telefono. La prima è quella grande in alto.</span>
 <span class="scelti" id="foto-scelte" aria-live="polite"></span>
 </div>
-
-<div role="radiogroup" aria-labelledby="t-modello" class="gruppo">
-<p id="t-modello" class="etichetta-gruppo">Modello</p>
-<div class="scelte">
-<label class="scelta">
-<input type="radio" name="modello" value="tavola" data-nome="Riquadro">
-<span class="titolo-scelta">Riquadro</span>
-<span class="aiuto">Titolo dentro una grande foto, proposte in schede con foto e prezzo.</span>
-<a href="../esempi/pizzeriadamario/" target="_blank" rel="noopener">Guarda l'esempio</a>
-</label>
-<label class="scelta">
-<input type="radio" name="modello" value="salone" data-nome="Copertina">
-<span class="titolo-scelta">Copertina</span>
-<span class="aiuto">Foto a tutta larghezza e titolo sotto, listino con i prezzi.</span>
-<a href="../esempi/studiocapellianna/" target="_blank" rel="noopener">Guarda l'esempio</a>
-</label>
-<label class="scelta">
-<input type="radio" name="modello" value="bottega" data-nome="Mosaico">
-<span class="titolo-scelta">Mosaico</span>
-<span class="aiuto">Una foto grande e due piccole, schede con «Chiedi» su WhatsApp.</span>
-<a href="../esempi/fioridilu/" target="_blank" rel="noopener">Guarda l'esempio</a>
-</label>
-<label class="scelta">
-<input type="radio" name="modello" value="pronto" data-nome="Diretto">
-<span class="titolo-scelta">Diretto</span>
-<span class="aiuto">Il telefono in primo piano e le zone in cui lavori.</span>
-<a href="../esempi/idraulicarossi/" target="_blank" rel="noopener">Guarda l'esempio</a>
-</label>
-<label class="scelta">
-<input type="radio" name="modello" value="studio" data-nome="Classico">
-<span class="titolo-scelta">Classico</span>
-<span class="aiuto">Titolo centrato, foto ampia, elenco ordinato.</span>
-<a href="../esempi/studiobianchi/" target="_blank" rel="noopener">Guarda l'esempio</a>
-</label>
-</div>
-</div>
-<div id="box-verticale" class="campo carica verticale">
+<div id="box-verticale" class="campo carica verticale" hidden>
 <label for="foto-telefono">Una foto in verticale per il telefono</label>
 <input id="foto-telefono" name="foto_telefono" type="file" accept="image/*">
-<span class="aiuto">Con il modello <span id="nome-modello">Riquadro</span> la foto in alto, sul telefono, è verticale. Mandacene una scattata in verticale (anche diversa da quella per il computer), così sul telefono viene perfetta.</span>
-</div>
-<div role="radiogroup" aria-labelledby="t-carattere" class="gruppo">
-<p id="t-carattere" class="etichetta-gruppo">Carattere dei titoli</p>
-<div class="scelte">
-<label class="scelta">
-<input type="radio" name="carattere" value="moderno" data-nome="Moderno">
-<span class="campione" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800">Il tuo nome</span>
-<span class="titolo-scelta">Moderno</span>
-<span class="aiuto">Rotondo e amichevole</span>
-</label>
-<label class="scelta">
-<input type="radio" name="carattere" value="elegante" data-nome="Elegante">
-<span class="campione" style="font-family:'DM Serif Display',serif;font-weight:400">Il tuo nome</span>
-<span class="titolo-scelta">Elegante</span>
-<span class="aiuto">Classico, con grazie</span>
-</label>
-<label class="scelta">
-<input type="radio" name="carattere" value="deciso" data-nome="Deciso">
-<span class="campione" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase">Il tuo nome</span>
-<span class="titolo-scelta">Deciso</span>
-<span class="aiuto">Stretto e alto, da insegna</span>
-</label>
-</div>
+<span class="aiuto">Con il modello <span id="nome-modello">Moderno</span> la foto in alto, sul telefono, è verticale. Mandacene una scattata in verticale (anche diversa da quella per il computer), così sul telefono viene perfetta.</span>
 </div>
 
 <h3>Altro</h3>
@@ -297,20 +274,47 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <label for="diritti">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
 </div>
 
-<div class="riepilogo">
+<input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+<div class="avanti">
+<button type="submit" class="invia">Continua: scegli il dominio</button>
+<a class="indietro" href="../ordina/">Cambia modello o carattere</a>
+</div>
+</form>
+</main>
+
+<main class="scheda" id="passo3" hidden>
+<div>
+<h1 tabindex="-1" id="titolo-dominio">Scegli il dominio del tuo sito</h1>
+<p class="intro">Scrivi il nome della tua attività: ti mostriamo subito quelli liberi. Un dominio .it, .com o .eu è gratis per il primo anno ed è registrato a tuo nome.</p>
+</div>
+<form id="cerca-form" class="cerca">
+<label for="cerca" class="solo-lettori">Nome della tua attività</label>
+<input id="cerca" type="text" placeholder="Es. Pizzeria da Mario" autocomplete="organization" autocapitalize="words" enterkeyhint="search" maxlength="80">
+<button type="submit">Cerca</button>
+</form>
+<div class="esiti">
+<p id="intestazione" class="intestazione">Esempio: per «Pizzeria da Mario» cerchiamo pizzeriadamario.it, .com ed .eu.</p>
+<ul id="risultati" class="risultati"></ul>
+</div>
+
+<div class="riepilogo" id="riepilogo">
 <h2>Il tuo ordine</h2>
 <dl>
 <div><dt>SitoComodo</dt><dd>99 €</dd></div>
-<div><dt>Dominio</dt><dd><span id="dom">—</span><a href="../ordina/">Cambia</a></dd></div>
+<div><dt>Modello</dt><dd id="riep-modello">—</dd></div>
+<div><dt>Dominio</dt><dd id="dom">—</dd></div>
 <div><dt>Consegna</dt><dd>entro 30 minuti dal pagamento</dd></div>
 <div class="totale"><dt>Totale</dt><dd>99 € <small>IVA inclusa</small></dd></div>
 </dl>
 </div>
 
 <p class="errore-invio" id="errore-invio" role="alert" hidden></p>
-<input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
-<button type="submit" class="invia">Vai al pagamento</button>
-</form>
+<div class="avanti">
+<button type="button" class="invia" id="vai" aria-disabled="true">Scegli prima un dominio</button>
+<p class="piccolo">Poi i dati di chi intesta il dominio e il pagamento: il sito è online in 30 minuti.* <a href="#" id="torna">Torna ai dati</a></p>
+<p class="piccolo nota-asterisco">* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
+</div>
+</main>
 </div>
 <script>
 (function(){
@@ -320,27 +324,23 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   function pulito(d){ return (d || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 70); }
 
   var o = leggi(), form = document.getElementById('modulo');
-  var dom = pulito(new URLSearchParams(location.search).get('dominio') || o.dominio);
-  if (dom && dom !== o.dominio) { o.dominio = dom; scrivi(o); }
-  document.getElementById('dom').textContent = dom || '—';
+  var passo2 = document.getElementById('passo2'), passo3 = document.getElementById('passo3');
   var TESTI = ['nome', 'tipo', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'];
   TESTI.forEach(function(k){ var el = document.getElementById(k); if (o[k] && !el.value) el.value = o[k]; });
-  ['modello', 'carattere'].forEach(function(k){
-    if (!o[k]) return;
-    var r = form.querySelector('input[name=' + k + '][value="' + o[k] + '"]'); if (r) r.checked = true;
-  });
+  if (!o.modello) { o.modello = 'nostro'; o.modello_nome = 'Lo scegliamo noi'; }
+  if (!o.carattere) { o.carattere = 'nostro'; o.carattere_nome = 'Lo scegliamo noi'; }
+  scrivi(o);
+  var car = o.carattere === 'nostro' ? '' : ', carattere ' + o.carattere_nome.toLowerCase();
+  document.getElementById('scelta-fatta').textContent = o.modello === 'nostro'
+    ? (car ? 'Il modello lo scegliamo noi' + car + '.' : 'Modello e carattere li scegliamo noi.') : 'Hai scelto il modello ' + o.modello_nome + car + '.';
+  document.getElementById('riep-modello').textContent = o.modello === 'nostro' ? 'Lo scegliamo noi' : o.modello_nome;
 
   var altro = document.getElementById('altro');
-  if (['chi', 'servizi', 'whatsapp', 'indirizzo', 'orari', 'colori', 'social', 'google'].some(function(k){ return o[k]; })
-      || (o.modello && o.modello !== 'nostro') || (o.carattere && o.carattere !== 'nostro')) altro.open = true;
-  var box = document.getElementById('box-verticale'), nomeMod = document.getElementById('nome-modello');
-  function verticale(){
-    var m = form.querySelector('input[name=modello]:checked');
-    box.hidden = !(m && (m.value === 'tavola' || m.value === 'bottega'));
-    if (m) nomeMod.textContent = m.getAttribute('data-nome');
+  if (['chi', 'servizi', 'whatsapp', 'indirizzo', 'orari', 'colori', 'social', 'google'].some(function(k){ return o[k]; })) altro.open = true;
+  if (o.modello === 'tavola' || o.modello === 'bottega') {
+    document.getElementById('box-verticale').hidden = false;
+    document.getElementById('nome-modello').textContent = o.modello_nome;
   }
-  form.querySelectorAll('input[name=modello]').forEach(function(r){ r.addEventListener('change', verticale); });
-  verticale();
 
   var foto = document.getElementById('foto'), scelte = document.getElementById('foto-scelte');
   foto.addEventListener('change', function(){
@@ -351,10 +351,30 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   var logo = document.getElementById('logo'), logoScelto = document.getElementById('logo-scelto');
   logo.addEventListener('change', function(){ logoScelto.textContent = logo.files.length ? 'Logo scelto: ' + logo.files[0].name : ''; });
 
+  // ---- passaggi 2 e 3 nella stessa pagina: i file restano nel modulo
+  var passi = document.getElementById('passi');
+  function mostra(n){
+    passo2.hidden = n !== 2; passo3.hidden = n !== 3;
+    passi.querySelectorAll('li').forEach(function(li){
+      var k = +li.getAttribute('data-passo');
+      if (k === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+      li.classList.toggle('fatto', k < n);
+    });
+    document.title = n === 3 ? 'Scegli il dominio – SitoComodo' : 'Logo e la tua attività – SitoComodo';
+    window.scrollTo(0, 0);
+    if (n === 3) {
+      document.getElementById('titolo-dominio').focus({preventScroll: true});
+      if (!input.value) { input.value = (document.getElementById('nome').value || '').trim(); if (input.value) cerca(input.value); }
+    }
+  }
+  function datiPronti(){ return logo.files.length > 0; }
+  window.addEventListener('popstate', function(){ mostra(location.hash === '#dominio' && datiPronti() ? 3 : 2); });
+  if (location.hash === '#dominio') history.replaceState(null, '', location.pathname + location.search);
+  document.getElementById('torna').addEventListener('click', function(e){ e.preventDefault(); history.back(); });
+
   form.addEventListener('input', function(e){ if (e.target.checkValidity && e.target.checkValidity()) e.target.removeAttribute('aria-invalid'); });
   form.addEventListener('submit', function(e){
     e.preventDefault();
-    if (!dom) { location.href = '../ordina/'; return; }
     var primo = null;
     Array.prototype.forEach.call(form.elements, function(el){
       if (!el.willValidate) return;
@@ -363,18 +383,108 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     if (primo) { if (primo.closest('details')) primo.closest('details').open = true; primo.focus(); primo.reportValidity(); return; }
     var d = leggi();
     TESTI.forEach(function(k){ d[k] = document.getElementById(k).value.trim(); });
-    var m = form.querySelector('input[name=modello]:checked'), c = form.querySelector('input[name=carattere]:checked');
-    d.modello = m ? m.value : 'nostro'; d.modello_nome = m ? m.getAttribute('data-nome') : 'Lo scegliamo noi';
-    d.carattere = c ? c.value : 'nostro'; d.carattere_nome = c ? c.getAttribute('data-nome') : 'Lo scegliamo noi';
-    d.foto = foto.files.length; d.dominio = dom; d.quando = Date.now();
+    d.foto = foto.files.length; d.quando = Date.now();
     scrivi(d);
+    history.pushState(null, '', '#dominio');
+    mostra(3);
+  });
+
+  // ---- dominio
+  var cercaForm = document.getElementById('cerca-form'), input = document.getElementById('cerca');
+  var lista = document.getElementById('risultati'), intest = document.getElementById('intestazione');
+  var vai = document.getElementById('vai'), domEl = document.getElementById('dom'), riep = document.getElementById('riepilogo');
+  var giro = 0, sel = '', righe = [];
+
+  function base(t){
+    return t.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\.(it|com|eu|net|org)$/, '')
+      .replace(/&/g, 'e').replace(/['’`]/g, '').replace(/\s+/g, '')
+      .replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  }
+  function dns(dom){
+    return fetch('https://dns.google/resolve?name=' + dom + '&type=NS').then(function(r){ return r.json(); })
+      .then(function(j){ return j.Status; })
+      .catch(function(){
+        return fetch('https://cloudflare-dns.com/dns-query?name=' + dom + '&type=NS', {headers: {accept: 'application/dns-json'}})
+          .then(function(r){ return r.json(); }).then(function(j){ return j.Status; });
+      })
+      .then(function(s){ return s === 3 ? true : s === 0 ? false : null; });
+  }
+  function libero(dom){
+    if (/\.com$/.test(dom)) {
+      return fetch('https://rdap.verisign.com/com/v1/domain/' + dom, {headers: {accept: 'application/rdap+json'}})
+        .then(function(r){ return r.status === 404 ? true : r.status === 200 ? false : dns(dom); })
+        .catch(function(){ return dns(dom); });
+    }
+    return dns(dom);
+  }
+  function aggiorna(){
+    righe.forEach(function(r){
+      var s = r.dom === sel;
+      r.li.classList.toggle('scelta', s);
+      if (r.btn) { r.btn.textContent = s ? 'Scelto' : 'Scegli'; r.btn.setAttribute('aria-pressed', s ? 'true' : 'false'); }
+    });
+    domEl.textContent = sel || '—';
+    if (sel) { vai.removeAttribute('aria-disabled'); vai.textContent = 'Vai al pagamento'; }
+    else { vai.setAttribute('aria-disabled', 'true'); vai.textContent = 'Scegli prima un dominio'; }
+  }
+  function riga(dom, tag){
+    var li = document.createElement('li'); li.className = 'riga attesa';
+    var nome = document.createElement('div'); nome.className = 'nome';
+    var d = document.createElement('span'); d.className = 'dom'; d.textContent = dom; nome.append(d);
+    if (tag) { var t = document.createElement('span'); t.className = 'etichetta'; t.textContent = tag; nome.append(t); }
+    var stato = document.createElement('div'); stato.className = 'stato'; stato.textContent = 'Controllo…';
+    li.append(nome, stato); lista.append(li);
+    var r = {dom: dom, li: li, btn: null}; righe.push(r);
+    return {r: r, stato: stato};
+  }
+  function cerca(testo){
+    var b = base(testo), mio = ++giro;
+    lista.textContent = ''; righe = []; sel = ''; aggiorna();
+    if (b.length < 3) { intest.textContent = 'Scrivi un nome di almeno 3 lettere o numeri.'; return; }
+    intest.textContent = 'Risultati per «' + testo.trim() + '»';
+    [[b + '.it', 'Consigliato'], [b + '.com', ''], [b + '.eu', ''], [b + '-online.it', 'Alternativa']].forEach(function(p){
+      var x = riga(p[0], p[1]);
+      libero(p[0]).catch(function(){ return null; }).then(function(ok){
+        if (mio !== giro) return;
+        x.stato.textContent = '';
+        if (ok === true) {
+          x.r.li.className = 'riga libero';
+          var s = document.createElement('span'); s.textContent = 'Libero, gratis il primo anno';
+          var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Scegli'; btn.setAttribute('aria-pressed', 'false');
+          btn.addEventListener('click', function(){
+            sel = p[0];
+            var o2 = leggi(); o2.dominio = sel; scrivi(o2);
+            aggiorna();
+            try { document.dispatchEvent(new CustomEvent('sc-dominio', {detail: sel})); } catch(e) {}
+            if (window.matchMedia('(max-width: 1000px)').matches) riep.scrollIntoView({behavior: 'smooth', block: 'start'});
+          });
+          x.r.btn = btn; x.stato.append(s, btn);
+        } else if (ok === false) {
+          x.r.li.className = 'riga preso'; x.stato.textContent = 'Già preso';
+        } else {
+          x.r.li.className = 'riga preso'; x.stato.textContent = 'Non riusciamo a controllarlo, riprova tra poco';
+        }
+        aggiorna();
+      });
+    });
+  }
+  cercaForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!input.value.trim()) { input.focus(); return; }
+    input.blur();
+    cerca(input.value);
+  });
+
+  // ---- invio dell'ordine (testi, logo e foto) allo snippet di WordPress; poi si va al pagamento
+  var INVIO = true, DESTINO = "/wp-admin/admin-post.php?action=sc_ordine", MAX = 9500000;
+  var erroreInvio = document.getElementById('errore-invio');
+  vai.addEventListener('click', function(){
+    if (!sel) { input.focus(); return; }
+    var d = leggi(); d.dominio = sel; scrivi(d);
     if (!INVIO) { location.href = '../checkout/'; return; }
     invia(d);
   });
-
-  // ---- invio dell'ordine per email (FormSubmit), testi e foto in allegato; poi FormSubmit rimanda al pagamento
-  var INVIO = true, DESTINO = "/wp-admin/admin-post.php?action=sc_ordine", MAX = 9500000;
-  var erroreInvio = document.getElementById('errore-invio');
   function rimpicciolisci(file, logo){
     return new Promise(function(ok){
       if (!file || !/^image\/(jpeg|png|webp|heic|heif)/.test(file.type) || !window.createImageBitmap) { ok(file); return; }
@@ -392,9 +502,9 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
       }).catch(function(){ ok(file); });
     });
   }
-  function sostituisci(input, files){
+  function sostituisci(el, files){
     if (!files.length || !window.DataTransfer) return;
-    try { var dt = new DataTransfer(); files.forEach(function(f){ dt.items.add(f); }); input.files = dt.files; } catch(e) {}
+    try { var dt = new DataTransfer(); files.forEach(function(f){ dt.items.add(f); }); el.files = dt.files; } catch(e) {}
   }
   function nascosto(nome, valore){
     var i = form.querySelector('input[name="' + nome + '"]');
@@ -402,29 +512,30 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     i.value = valore;
   }
   function invia(d){
-    var btn = form.querySelector('button.invia'), testo = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Carico i file\u2026'; erroreInvio.hidden = true;
-    var gruppi = [[document.getElementById('foto'), false], [document.getElementById('logo'), true], [document.getElementById('foto-telefono'), false]];
+    var testo = vai.textContent;
+    vai.disabled = true; vai.textContent = 'Carico i file…'; erroreInvio.hidden = true;
+    var gruppi = [[document.getElementById('foto'), false], [logo, true], [document.getElementById('foto-telefono'), false]];
     Promise.all(gruppi.map(function(g){ return Promise.all(Array.prototype.map.call(g[0].files, function(f){ return rimpicciolisci(f, g[1]); })); }))
     .then(function(liste){
       var peso = 0;
       liste.forEach(function(l, k){ sostituisci(gruppi[k][0], l); l.forEach(function(f){ peso += f.size; }); });
       if (peso > MAX) {
-        erroreInvio.textContent = 'Le foto pesano troppo per inviarle tutte insieme. Scegline qualcuna in meno, oppure foto pi\u00f9 leggere.';
-        erroreInvio.hidden = false; btn.disabled = false; btn.textContent = testo; return;
+        erroreInvio.textContent = 'Le foto pesano troppo per inviarle tutte insieme. Torna ai dati e scegline qualcuna in meno, oppure foto più leggere.';
+        erroreInvio.hidden = false; vai.disabled = false; vai.textContent = testo; return;
       }
       nascosto('dominio', d.dominio);
-      nascosto('modello_scelto', d.modello_nome);
-      nascosto('carattere_scelto', d.carattere_nome);
-      btn.textContent = 'Invio l\u2019ordine\u2026';
+      nascosto('modello', d.modello); nascosto('modello_scelto', d.modello_nome);
+      nascosto('carattere', d.carattere); nascosto('carattere_scelto', d.carattere_nome);
+      vai.textContent = 'Invio l’ordine…';
       form.action = DESTINO; form.method = 'POST'; form.enctype = 'multipart/form-data';
       HTMLFormElement.prototype.submit.call(form);
     }).catch(function(){
       erroreInvio.textContent = 'Non siamo riusciti a preparare le foto. Riprova, oppure scrivici a info@sitocomodo.it.';
-      erroreInvio.hidden = false; btn.disabled = false; btn.textContent = testo;
+      erroreInvio.hidden = false; vai.disabled = false; vai.textContent = testo;
     });
   }
-  window.addEventListener('pageshow', function(){ var b = form.querySelector('button.invia'); b.disabled = false; b.textContent = 'Vai al pagamento'; });
+  window.addEventListener('pageshow', function(){ vai.disabled = false; aggiorna(); });
+  aggiorna();
 })();
 </script>
 <script src="/consenso.js" defer></script>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Scegli il dominio – SitoComodo</title>
+<title>Scegli il tuo sito – SitoComodo</title>
 <meta name="theme-color" content="#FDE047">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -15,6 +15,9 @@
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
 @font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Space Grotesk";src:url("../fonts/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Bricolage Grotesque";src:url("../fonts/bricolage-grotesque-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"DM Serif Display";src:url("../fonts/dm-serif-display-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("../fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;font-family:Inter,system-ui,sans-serif;color:#111827;background:#EEF4FF;-webkit-text-size-adjust:100%}
@@ -65,63 +68,157 @@ dd a{display:block;font-size:14px;font-weight:600}
   .riepilogo{padding:22px;box-shadow:4px 4px 0 #111827}
   .nota{padding:20px}
 }
+/* 22/11/2026: pezzi comuni ai passaggi 1 e 2-3, nello stesso stile */
+.invia{min-height:60px;width:100%;border:2px solid #111827;border-radius:18px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:19px;font-weight:700;cursor:pointer;box-shadow:5px 5px 0 #111827}
+.invia:hover{background:#1E40AF}
+.invia[aria-disabled=true],.invia:disabled{background:#E5E7EB;color:#4B5563;border-color:#9CA3AF;box-shadow:none;cursor:default}
+.errore-invio{margin:0;padding:12px 14px;border-radius:12px;background:#FEE2E2;color:#991B1B;font-weight:600}
+.indietro{align-self:flex-start;font-weight:600;padding:10px 0}
+.avanti{display:flex;flex-direction:column;gap:12px;padding-top:24px;border-top:2px solid #E5E7EB;scroll-margin-top:16px}
+@media (max-width:640px){.invia{box-shadow:4px 4px 0 #111827}}
 
-.avanti{display:flex;flex-direction:column;gap:10px;padding-top:24px;border-top:2px solid #E5E7EB;scroll-margin-top:16px}
-.nota-asterisco{font-size:13px}
-.cerca{display:flex;flex-wrap:wrap;gap:8px;background:#FFFFFF;border:2px solid #111827;border-radius:20px;padding:8px;box-shadow:6px 6px 0 #111827}
-.cerca input{flex:1 1 220px;min-width:0;min-height:56px;border:0;background:transparent;font:inherit;font-size:19px;padding:0 14px;color:#111827}
-.cerca button{flex:0 0 auto;min-height:56px;padding:0 28px;border:0;border-radius:14px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
-.esiti{display:flex;flex-direction:column;gap:12px}
-.intestazione{margin:0;font-size:15px;color:#4B5563}
-.risultati{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
-.riga{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:18px 20px;border-radius:18px;background:#FFFFFF;border:2px solid #111827}
-.riga.preso,.riga.attesa{background:#F9FAFB;border-color:#D1D5DB}
-.riga.scelta{background:#EEF4FF;border:3px solid #111827;padding:17px 19px}
-.riga .nome{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 240px}
-.riga .dom{font-weight:700;font-size:20px;overflow-wrap:anywhere}
-.etichetta{align-self:flex-start;background:#FED7AA;border:2px solid #111827;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
-.stato{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:15px;font-weight:600;color:#4B5563}
-.riga.libero .stato{color:#166534}
-.riga button{min-height:48px;min-width:110px;padding:0 20px;border-radius:14px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;border:2px solid #111827;background:#FFFFFF;color:#111827}
-.riga.scelta button{background:#1D4ED8;color:#FFFFFF}
+fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:14px}
+legend{font-size:22px;font-weight:700;margin-bottom:6px;padding:0}
+#scegli{display:flex;flex-direction:column;gap:36px}
+.aiuto{font-size:14px;line-height:1.5;color:#4B5563}
+.titolo-scelta{font-weight:700;font-size:18px}
+.modelli{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.modello{position:relative;display:flex;flex-direction:column;gap:4px}
+.modello label,.carattere{position:relative;display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;cursor:pointer;background:#FFFFFF;border:2px solid #9CA3AF}
+.modello label:has(input:checked),.carattere:has(input:checked){background:#EEF4FF;border:3px solid #111827;padding:13px;box-shadow:4px 4px 0 #111827}
+.modello label:has(input:focus-visible),.carattere:has(input:focus-visible){outline:3px solid #F97316;outline-offset:2px}
+.modello input,.carattere input{position:absolute;opacity:0;width:1px;height:1px}
+.modello img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:top;border-radius:10px;border:2px solid #111827;background:#EEF4FF;margin-bottom:6px}
+.modello label:has(input:checked)::after,.carattere:has(input:checked)::after{content:"\2713";position:absolute;top:22px;right:22px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#1D4ED8;border:2px solid #111827;color:#FFFFFF;font-weight:700}
+.carattere:has(input:checked)::after{top:12px;right:12px}
+.esempio{align-self:flex-start;font-size:14px;font-weight:600;padding:8px 2px}
+.modello-noi label{height:100%;justify-content:center;padding:24px;background:#FFF7ED}
+.modello-noi label:has(input:checked){padding:23px}
+.caratteri{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.campione{display:block;font-size:28px;line-height:1.05;margin-bottom:4px;color:#111827}
+.carattere-noi{justify-content:center;background:#FFF7ED}
+@media (max-width:900px){
+  .modelli,.caratteri{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media (max-width:640px){
-  .cerca{box-shadow:4px 4px 0 #111827}
-  .cerca button{flex:1 1 100%}
-  .riga{padding:14px 16px}.riga.scelta{padding:13px 15px}
-  .riga .dom{font-size:18px}
+  legend{font-size:20px}
+  .modelli{grid-template-columns:1fr}
+  .caratteri{gap:10px}
+  .campione{font-size:24px}
+  .avanti{position:sticky;bottom:0;z-index:5;margin:0 -18px -24px;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:#FFFFFF;border-top:2px solid #111827;border-radius:0 0 22px 22px}
+  .avanti .piccolo{display:none}
 }
 </style>
 </head>
 <body>
 <header class="testata"><div>
 <a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
-<ol class="passi" aria-label="Passaggi dell'ordine">
-<li aria-current="step">1. Dominio</li>
-<li>2. Raccontaci di te</li>
-<li>3. Pagamento</li>
+<ol class="passi" id="passi" aria-label="In 3 passaggi hai il tuo sito">
+<li aria-current="step" data-passo="1"><span>1. Scegli il sito</span></li>
+<li data-passo="2"><span>2. Logo e attività</span></li>
+<li data-passo="3"><span>3. Dominio e pagamento</span></li>
 </ol>
 </div></header>
-<div class="corpo stretto">
+<div class="corpo">
 <main class="scheda">
 <div>
-<h1>Scegli il dominio del tuo sito</h1>
-<p class="offerta">Sito vetrina a 99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</p>
-<p class="intro">Scrivi il nome della tua attività: ti mostriamo subito quelli liberi. Un dominio .it, .com o .eu è gratis per il primo anno. Prenditi pure il tempo che serve, è l'unica scelta difficile.</p>
+<h1>Scegli come sarà il tuo sito</h1>
+<p class="intro">In 3 passaggi hai il tuo sito: scegli il modello, mandaci il logo e due informazioni sulla tua attività, prendi il dominio e paghi. Ci vogliono 5 minuti.</p>
+<p class="offerta">Sito vetrina a 99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</p>
 </div>
-<form id="cerca-form" class="cerca">
-<label for="cerca" class="solo-lettori">Nome della tua attività</label>
-<input id="cerca" type="text" placeholder="Es. Pizzeria da Mario" autocomplete="organization" autocapitalize="words" enterkeyhint="search" maxlength="80">
-<button type="submit">Cerca</button>
+<form id="scegli" novalidate>
+<fieldset class="gruppo" aria-describedby="nota-modelli">
+<legend>Il modello</legend>
+<p class="aiuto" id="nota-modelli">Gli esempi sono siti veri, solo le attività sono inventate. Il tuo avrà le tue foto, i tuoi colori e i tuoi testi.</p>
+<div class="modelli">
+<div class="modello">
+<label>
+<input type="radio" name="modello" value="tavola" data-nome="Moderno">
+<img src="../esempi/miniature/pizzeriadamario.jpg" width="960" height="600" alt="" loading="eager">
+<span class="titolo-scelta">Moderno</span>
+<span class="aiuto">Titolo dentro una grande foto, proposte in schede con foto e prezzo.</span>
+</label>
+<a class="esempio" href="../esempi/pizzeriadamario/" target="_blank" rel="noopener">Apri l'esempio<span class="solo-lettori"> del modello Moderno</span></a>
+</div>
+<div class="modello">
+<label>
+<input type="radio" name="modello" value="salone" data-nome="Classico">
+<img src="../esempi/miniature/studiocapellianna.jpg" width="960" height="600" alt="" loading="eager">
+<span class="titolo-scelta">Classico</span>
+<span class="aiuto">Foto a tutta larghezza e titolo sotto, listino con i prezzi.</span>
+</label>
+<a class="esempio" href="../esempi/studiocapellianna/" target="_blank" rel="noopener">Apri l'esempio<span class="solo-lettori"> del modello Classico</span></a>
+</div>
+<div class="modello">
+<label>
+<input type="radio" name="modello" value="studio" data-nome="Professionale">
+<img src="../esempi/miniature/studiobianchi.jpg" width="960" height="600" alt="" loading="lazy">
+<span class="titolo-scelta">Professionale</span>
+<span class="aiuto">Titolo grande in alto, come una lettera, foto ampia e servizi in ordine.</span>
+</label>
+<a class="esempio" href="../esempi/studiobianchi/" target="_blank" rel="noopener">Apri l'esempio<span class="solo-lettori"> del modello Professionale</span></a>
+</div>
+<div class="modello">
+<label>
+<input type="radio" name="modello" value="bottega" data-nome="Fotografico">
+<img src="../esempi/miniature/fioridilu.jpg" width="960" height="600" alt="" loading="lazy">
+<span class="titolo-scelta">Fotografico</span>
+<span class="aiuto">Una foto grande e due piccole, schede con «Chiedi» su WhatsApp.</span>
+</label>
+<a class="esempio" href="../esempi/fioridilu/" target="_blank" rel="noopener">Apri l'esempio<span class="solo-lettori"> del modello Fotografico</span></a>
+</div>
+<div class="modello">
+<label>
+<input type="radio" name="modello" value="pronto" data-nome="Diretto">
+<img src="../esempi/miniature/idraulicarossi.jpg" width="960" height="600" alt="" loading="lazy">
+<span class="titolo-scelta">Diretto</span>
+<span class="aiuto">Il telefono in primo piano e le zone in cui lavori.</span>
+</label>
+<a class="esempio" href="../esempi/idraulicarossi/" target="_blank" rel="noopener">Apri l'esempio<span class="solo-lettori"> del modello Diretto</span></a>
+</div>
+<div class="modello modello-noi">
+<label>
+<input type="radio" name="modello" value="nostro" data-nome="Lo scegliamo noi">
+<span class="titolo-scelta">Scegliete voi</span>
+<span class="aiuto">Non sai quale? Lo scegliamo noi, in base alla tua attività e alle foto.</span>
+</label>
+</div>
+</div>
+</fieldset>
+<fieldset class="gruppo">
+<legend>Il carattere dei titoli</legend>
+<div class="caratteri">
+<label class="carattere">
+<input type="radio" name="carattere" value="moderno" data-nome="Amichevole">
+<span class="campione" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:500">Il tuo nome</span>
+<span class="titolo-scelta">Amichevole</span>
+<span class="aiuto">Rotondo e morbido</span>
+</label>
+<label class="carattere">
+<input type="radio" name="carattere" value="elegante" data-nome="Elegante">
+<span class="campione" style="font-family:'DM Serif Display',serif;font-weight:400">Il tuo nome</span>
+<span class="titolo-scelta">Elegante</span>
+<span class="aiuto">Classico, con grazie</span>
+</label>
+<label class="carattere">
+<input type="radio" name="carattere" value="deciso" data-nome="Deciso">
+<span class="campione" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase">Il tuo nome</span>
+<span class="titolo-scelta">Deciso</span>
+<span class="aiuto">Stretto e alto, da insegna</span>
+</label>
+<label class="carattere carattere-noi">
+<input type="radio" name="carattere" value="nostro" data-nome="Lo scegliamo noi">
+<span class="titolo-scelta">Scegliete voi</span>
+<span class="aiuto">Quello che sta meglio con il tuo logo.</span>
+</label>
+</div>
+</fieldset>
+<p class="errore-invio" id="errore" role="alert" hidden></p>
+<div class="avanti">
+<button type="submit" class="invia">Continua</button>
+<p class="piccolo">Poi ci mandi il logo e due informazioni sulla tua attività. Puoi cambiare idea fino al pagamento.</p>
+</div>
 </form>
-<div class="esiti">
-<p id="intestazione" class="intestazione">Esempio: per «Pizzeria da Mario» cerchiamo pizzeriadamario.it, .com ed .eu.</p>
-<ul id="risultati" class="risultati"></ul>
-</div>
-<div id="avanti" class="avanti">
-<a id="vai" class="bottone" role="link" aria-disabled="true">Scegli prima un dominio</a>
-<p class="piccolo">Il dominio viene registrato a tuo nome. Poi ci racconti la tua attività in 5 minuti, paghi e il sito è online in 30 minuti.*</p>
-<p class="piccolo nota-asterisco">* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
-</div>
 </main>
 </div>
 <script>
@@ -131,92 +228,27 @@ dd a{display:block;font-size:14px;font-weight:600}
   function scrivi(o){ try { localStorage.setItem('sitocomodo_ordine', JSON.stringify(o)); } catch(e) {} }
   function pulito(d){ return (d || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 70); }
 
-  var form = document.getElementById('cerca-form'), input = document.getElementById('cerca');
-  var lista = document.getElementById('risultati'), intest = document.getElementById('intestazione');
-  var vai = document.getElementById('vai'), riep = document.getElementById('avanti');
-  var giro = 0, sel = '', righe = [];
-
-  function base(t){
-    return t.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\.(it|com|eu|net|org)$/, '')
-      .replace(/&/g, 'e').replace(/['’`]/g, '').replace(/\s+/g, '')
-      .replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
-  }
-  function dns(dom){
-    return fetch('https://dns.google/resolve?name=' + dom + '&type=NS').then(function(r){ return r.json(); })
-      .then(function(j){ return j.Status; })
-      .catch(function(){
-        return fetch('https://cloudflare-dns.com/dns-query?name=' + dom + '&type=NS', {headers: {accept: 'application/dns-json'}})
-          .then(function(r){ return r.json(); }).then(function(j){ return j.Status; });
-      })
-      .then(function(s){ return s === 3 ? true : s === 0 ? false : null; });
-  }
-  function libero(dom){
-    if (/\.com$/.test(dom)) {
-      return fetch('https://rdap.verisign.com/com/v1/domain/' + dom, {headers: {accept: 'application/rdap+json'}})
-        .then(function(r){ return r.status === 404 ? true : r.status === 200 ? false : dns(dom); })
-        .catch(function(){ return dns(dom); });
-    }
-    return dns(dom);
-  }
-  function aggiorna(){
-    righe.forEach(function(r){
-      var s = r.dom === sel;
-      r.li.classList.toggle('scelta', s);
-      if (r.btn) { r.btn.textContent = s ? 'Scelto' : 'Scegli'; r.btn.setAttribute('aria-pressed', s ? 'true' : 'false'); }
-    });
-    if (sel) { vai.href = '../ordine/'; vai.removeAttribute('aria-disabled'); vai.textContent = 'Continua'; }
-    else { vai.removeAttribute('href'); vai.setAttribute('aria-disabled', 'true'); vai.textContent = 'Scegli prima un dominio'; }
-  }
-  function riga(dom, tag){
-    var li = document.createElement('li'); li.className = 'riga attesa';
-    var nome = document.createElement('div'); nome.className = 'nome';
-    var d = document.createElement('span'); d.className = 'dom'; d.textContent = dom; nome.append(d);
-    if (tag) { var t = document.createElement('span'); t.className = 'etichetta'; t.textContent = tag; nome.append(t); }
-    var stato = document.createElement('div'); stato.className = 'stato'; stato.textContent = 'Controllo…';
-    li.append(nome, stato); lista.append(li);
-    var r = {dom: dom, li: li, btn: null}; righe.push(r);
-    return {r: r, stato: stato};
-  }
-  function cerca(testo){
-    var b = base(testo), mio = ++giro;
-    lista.textContent = ''; righe = []; sel = ''; aggiorna();
-    if (b.length < 3) { intest.textContent = 'Scrivi un nome di almeno 3 lettere o numeri.'; return; }
-    intest.textContent = 'Risultati per «' + testo.trim() + '»';
-    [[b + '.it', 'Consigliato'], [b + '.com', ''], [b + '.eu', ''], [b + '-online.it', 'Alternativa']].forEach(function(p){
-      var x = riga(p[0], p[1]);
-      libero(p[0]).catch(function(){ return null; }).then(function(ok){
-        if (mio !== giro) return;
-        x.stato.textContent = '';
-        if (ok === true) {
-          x.r.li.className = 'riga libero';
-          var s = document.createElement('span'); s.textContent = 'Libero · gratis il primo anno';
-          var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Scegli'; btn.setAttribute('aria-pressed', 'false');
-          btn.addEventListener('click', function(){
-            sel = p[0];
-            var o = leggi(); o.dominio = sel; if (!o.nome) o.nome = testo.trim().slice(0, 80); scrivi(o);
-            aggiorna();
-            if (window.matchMedia('(max-width: 1000px)').matches) riep.scrollIntoView({behavior: 'smooth', block: 'start'});
-          });
-          x.r.btn = btn; x.stato.append(s, btn);
-        } else if (ok === false) {
-          x.r.li.className = 'riga preso'; x.stato.textContent = 'Già preso';
-        } else {
-          x.r.li.className = 'riga preso'; x.stato.textContent = 'Non riusciamo a controllarlo, riprova tra poco';
-        }
-        aggiorna();
-      });
-    });
-  }
+  var form = document.getElementById('scegli'), errore = document.getElementById('errore'), o = leggi();
+  var q = new URLSearchParams(location.search).get('q');
+  if (q && !o.nome) { o.nome = q.trim().slice(0, 80); scrivi(o); }
+  ['modello', 'carattere'].forEach(function(k){
+    if (!o[k]) return;
+    var r = form.querySelector('input[name=' + k + '][value="' + o[k] + '"]'); if (r) r.checked = true;
+  });
+  form.addEventListener('change', function(){ errore.hidden = true; });
   form.addEventListener('submit', function(e){
     e.preventDefault();
-    if (!input.value.trim()) { input.focus(); return; }
-    input.blur();
-    cerca(input.value);
+    var m = form.querySelector('input[name=modello]:checked'), c = form.querySelector('input[name=carattere]:checked');
+    if (!m) {
+      errore.textContent = 'Scegli un modello, oppure «Scegliete voi».'; errore.hidden = false;
+      form.querySelector('input[name=modello]').focus(); return;
+    }
+    var d = leggi();
+    d.modello = m.value; d.modello_nome = m.getAttribute('data-nome');
+    d.carattere = c ? c.value : 'nostro'; d.carattere_nome = c ? c.getAttribute('data-nome') : 'Lo scegliamo noi';
+    scrivi(d);
+    location.href = '../ordine/';
   });
-  var q = new URLSearchParams(location.search).get('q');
-  if (q) { input.value = q.slice(0, 80); cerca(input.value); }
-  aggiorna();
 })();
 </script>
 <script src="/consenso.js" defer></script>
