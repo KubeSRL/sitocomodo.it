@@ -723,6 +723,8 @@ function sc_compra_dominio($sessione, $forza = false) {
     $righe[] = '';
     $righe[] = 'Ordine del cliente: ' . ($ordini[$k]['nome'] ?? '') . ' — pagato il ' . ($ordini[$k]['pagamento']['quando'] ?? '');
     wp_mail(SC_DESTINATARIO, $oggetto, implode("\n", $righe), ['Content-Type: text/plain; charset=UTF-8']);
+    // il dominio è a posto (o è stato segnalato): ora la fabbrica costruisce il sito
+    sc_fabbrica_avvia($sessione);
 }
 
 // ---------------------------------------------------------------- 3. pagina «Ordini SitoComodo» nella bacheca
@@ -761,6 +763,24 @@ function sc_pagina_ordini() {
         sc_compra_dominio(sanitize_text_field(wp_unslash((string) $_POST['sc_riprova'])), true);
         $messaggio = 'Acquisto del dominio riprovato: l\'esito è nell\'ordine qui sotto e nell\'email a ' . SC_DESTINATARIO . '.';
     }
+    if (isset($_POST['sc_fabbrica_salva']) && check_admin_referer('sc_fabbrica')) {
+        $v = trim(wp_unslash((string) ($_POST['sc_gh_token'] ?? '')));
+        if ($v !== '') update_option('sc_gh_token', preg_replace('/[^A-Za-z0-9_]/', '', $v), false);
+        $repo = trim(wp_unslash((string) ($_POST['sc_gh_repo'] ?? '')));
+        if (preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $repo)) update_option('sc_gh_repo', $repo, false);
+        update_option('sc_fabbrica_attiva', !empty($_POST['sc_fabbrica_attiva']) ? '1' : '', false);
+        update_option('sc_email_cliente', !empty($_POST['sc_email_cliente']) ? '1' : '', false);
+        $messaggio = 'Impostazioni della costruzione automatica salvate.';
+    }
+    if (isset($_POST['sc_fabbrica_prova']) && check_admin_referer('sc_fabbrica')) {
+        $e = sc_fabbrica_dispatch('ordine-pagato', sc_fabbrica_ordine_di_prova());
+        $messaggio = is_wp_error($e) ? 'Prova NON partita: ' . $e->get_error_message()
+                                     : 'Prova partita: tra qualche minuto arriva l\'esito per email a ' . SC_DESTINATARIO . '.';
+    }
+    if (isset($_POST['sc_fabbrica_riprova']) && check_admin_referer('sc_fabbrica')) {
+        $e = sc_fabbrica_avvia(sanitize_text_field(wp_unslash((string) $_POST['sc_fabbrica_riprova'])), 'ordine-pagato', true);
+        $messaggio = is_wp_error($e) ? 'Costruzione NON partita: ' . $e->get_error_message() : 'Costruzione del sito ripartita.';
+    }
     $collegato = get_option('sc_stripe_whsec', '') !== '';
     $ordini = array_reverse(sc_ordini_leggi());
     echo '<div class="wrap"><h1>Ordini SitoComodo</h1>';
@@ -791,6 +811,20 @@ function sc_pagina_ordini() {
             $da = $o['dominio_acquisto'];
             $det .= '<p><strong>Dominio su OVH:</strong> ' . esc_html(($da['stato'] ?? '') . ' — ' . ($da['dettaglio'] ?? '') . ' (' . ($da['quando'] ?? '') . ')') . '</p>';
         }
+        if (!empty($o['sito'])) {
+            $s = $o['sito'];
+            $det .= '<p><strong>Sito:</strong> ' . esc_html(($s['stato'] ?? '') . (!empty($s['aggiornato']) ? ' (' . $s['aggiornato'] . ')' : ''));
+            if (!empty($s['url_finale'])) $det .= '<br><a href="' . esc_url($s['url_finale']) . '" target="_blank" rel="noopener">' . esc_html($s['url_finale']) . '</a>';
+            if (!empty($s['url_anteprima'])) $det .= '<br>Anteprima: <a href="' . esc_url($s['url_anteprima']) . '" target="_blank" rel="noopener">' . esc_html($s['url_anteprima']) . '</a>';
+            foreach (array_merge($s['note_per_giuseppe'] ?? [], $s['note'] ?? []) as $nota) $det .= '<br>· ' . esc_html($nota);
+            if (!empty($s['run'])) $det .= '<br><a href="' . esc_url($s['run']) . '" target="_blank" rel="noopener">Dettagli su GitHub</a>';
+            $det .= '</p>';
+        }
+        if (!empty($o['pagamento']['sessione'])) {
+            $det .= '<form method="post">' . wp_nonce_field('sc_fabbrica', '_wpnonce', true, false)
+                  . '<input type="hidden" name="sc_fabbrica_riprova" value="' . esc_attr($o['pagamento']['sessione']) . '">'
+                  . '<button class="button" onclick="return confirm(\'Ricostruisco e ripubblico il sito di ' . esc_js($o['dominio'] ?? '') . '?\')">Ricostruisci il sito</button></form>';
+        }
         if (!empty($o['pagamento']['sessione']) && !empty($o['dominio']) && (($o['dominio_acquisto']['stato'] ?? '') !== 'comprato')) {
             $det .= '<form method="post">' . wp_nonce_field('sc_ovh', '_wpnonce', true, false)
                   . '<input type="hidden" name="sc_riprova" value="' . esc_attr($o['pagamento']['sessione']) . '">'
@@ -812,6 +846,24 @@ function sc_pagina_ordini() {
     wp_nonce_field('sc_salva_stripe');
     echo '<p><label>Segreto di firma del webhook (inizia con whsec_)<br><input type="password" name="sc_whsec" class="regular-text" autocomplete="off" placeholder="' . ($collegato ? 'già salvato — incolla solo per cambiarlo' : 'whsec_...') . '"></label></p>';
     submit_button('Salva codice Stripe');
+    echo '</form>';
+
+    // costruzione automatica dei siti (GitHub)
+    $segreto = sc_fabbrica_segreto();
+    $gh = get_option('sc_gh_token', '') !== '';
+    $fab = get_option('sc_fabbrica_attiva', '') === '1';
+    echo '<h2 style="margin-top:2em">Costruzione automatica dei siti (GitHub)</h2>';
+    echo '<p>Stato: <strong>' . ($fab && $gh ? 'accesa ✔' : ($gh ? 'chiave inserita, costruzione spenta' : 'manca la chiave GitHub')) . '</strong>. '
+        . 'Dopo il pagamento (e l\'acquisto del dominio) il sito si costruisce su GitHub, va online sull\'hosting OVH dei clienti e l\'esito arriva per email a ' . esc_html(SC_DESTINATARIO) . '.</p>';
+    echo '<p>Segreto da copiare su GitHub, nei segreti del repository, con il nome <code>SC_SEGRETO</code>: <code style="user-select:all">' . esc_html($segreto) . '</code></p>';
+    echo '<form method="post">';
+    wp_nonce_field('sc_fabbrica');
+    echo '<p><label>Chiave GitHub (token con permesso «Contents: read and write» sul repository)<br><input type="password" name="sc_gh_token" class="regular-text" autocomplete="off" placeholder="' . ($gh ? 'già salvata — incolla solo per cambiarla' : 'github_pat_...') . '"></label></p>';
+    echo '<p><label>Repository<br><input type="text" name="sc_gh_repo" class="regular-text" value="' . esc_attr(get_option('sc_gh_repo', 'KubeSRL/sitocomodo-fabbrica')) . '"></label></p>';
+    echo '<p><label><input type="checkbox" name="sc_fabbrica_attiva" value="1"' . checked($fab, true, false) . '> Costruzione automatica accesa</label></p>';
+    echo '<p><label><input type="checkbox" name="sc_email_cliente" value="1"' . checked(get_option('sc_email_cliente', '') === '1', true, false) . '> Quando il sito è online, manda l\'email al cliente</label></p>';
+    echo '<p><button class="button button-primary" name="sc_fabbrica_salva" value="1">Salva</button> ';
+    echo '<button class="button" name="sc_fabbrica_prova" value="1">Fai una prova</button> <span class="description">(sito finto in una cartella di prova: nessun dominio, nessun cliente)</span></p>';
     echo '</form>';
 
     // acquisto automatico dei domini
@@ -1126,3 +1178,197 @@ function sc_pagina_live() {
 SC_LIVE_HTML;
     echo str_replace(['%%URL%%', '%%NONCE%%'], [wp_json_encode($url), wp_json_encode($nonce)], $html);
 }
+
+// ---------------------------------------------------------------- 6. Fabbrica: il sito del cliente si costruisce da solo
+// Dopo il pagamento WordPress avvia su GitHub il workflow «Ordine SitoComodo» (repository_dispatch). Là Claude Code
+// costruisce e controlla il sito, che va online sull'hosting OVH dei clienti; l'esito torna qui su /esito, protetto
+// dal segreto condiviso. Se il dominio non è ancora pronto, WordPress richiede il collegamento ogni 15 minuti (max 12 ore).
+
+function sc_fabbrica_segreto() {
+    $s = (string) get_option('sc_fabbrica_segreto', '');
+    if ($s === '') {
+        $s = wp_generate_password(40, false, false);
+        update_option('sc_fabbrica_segreto', $s, false);
+    }
+    return $s;
+}
+
+function sc_fabbrica_dati($o) {
+    $file = [];
+    foreach (($o['file'] ?? []) as $f) {
+        if (!empty($o['cartella']) && !empty($f['file'])) {
+            $file[] = ['campo' => $f['campo'] ?? '', 'file' => $f['file'], 'url' => sc_url_foto($o['cartella'], $f['file'])];
+        }
+    }
+    $i = $o['intestatario'] ?? [];
+    $d = ['sessione' => $o['pagamento']['sessione'] ?? '', 'prova' => false, 'dominio' => $o['dominio'] ?? ''];
+    foreach (['nome', 'tipo', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'] as $k) {
+        $d[$k] = (string) ($o[$k] ?? '');
+    }
+    $d['modello'] = (string) ($o['modello'] ?? 'nostro');
+    $d['carattere'] = (string) ($o['carattere'] ?? 'nostro');
+    $d['piva'] = (string) ($i['piva'] ?? '');
+    $d['ragione'] = (string) ($i['ragione'] ?? '');
+    $d['citta_intestatario'] = (string) ($i['citta'] ?? '');
+    $d['provincia_intestatario'] = (string) ($i['provincia'] ?? '');
+    $d['dominio_acquisto'] = (string) ($o['dominio_acquisto']['stato'] ?? '');
+    $d['file'] = $file;
+    return $d;
+}
+
+function sc_fabbrica_ordine_di_prova() {
+    return [
+        'sessione' => 'prova_' . time(), 'prova' => true, 'dominio' => 'prova-fabbrica.it',
+        'nome' => 'Fiori di Lu', 'tipo' => 'fiorista', 'chi' => '', 'servizi' => '', 'telefono' => '333 000 0000',
+        'whatsapp' => '', 'email' => SC_DESTINATARIO, 'indirizzo' => '', 'orari' => '', 'colori' => '', 'social' => '',
+        'google' => '', 'modello' => 'nostro', 'carattere' => 'nostro', 'piva' => '', 'ragione' => '',
+        'citta_intestatario' => 'Lecce', 'provincia_intestatario' => 'LE', 'dominio_acquisto' => 'prova',
+        'file' => [['campo' => 'logo', 'file' => 'logo.png', 'url' => home_url('/logo.png')]],
+    ];
+}
+
+function sc_fabbrica_dispatch($evento, $ordine) {
+    $token = (string) get_option('sc_gh_token', '');
+    $repo = (string) get_option('sc_gh_repo', 'KubeSRL/sitocomodo-fabbrica');
+    if ($token === '') return new WP_Error('token', 'manca la chiave GitHub');
+    $r = wp_remote_post('https://api.github.com/repos/' . $repo . '/dispatches', [
+        'timeout' => 20,
+        'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/vnd.github+json',
+                      'X-GitHub-Api-Version' => '2022-11-28', 'User-Agent' => 'SitoComodo', 'Content-Type' => 'application/json'],
+        'body' => wp_json_encode(['event_type' => $evento, 'client_payload' => ['ordine' => $ordine]]),
+    ]);
+    if (is_wp_error($r)) return $r;
+    $codice = (int) wp_remote_retrieve_response_code($r);
+    if ($codice !== 204) return new WP_Error('github', 'GitHub ha risposto ' . $codice . ': ' . mb_substr((string) wp_remote_retrieve_body($r), 0, 300));
+    return true;
+}
+
+function sc_fabbrica_trova($ordini, $sessione) {
+    foreach ($ordini as $k => $x) if ($sessione !== '' && ($x['pagamento']['sessione'] ?? '') === $sessione) return $k;
+    return null;
+}
+
+function sc_fabbrica_avvia($sessione, $evento = 'ordine-pagato', $forza = false) {
+    if (!$forza && get_option('sc_fabbrica_attiva', '') !== '1') return new WP_Error('spenta', 'costruzione automatica spenta');
+    $ordini = sc_ordini_leggi();
+    $k = sc_fabbrica_trova($ordini, $sessione);
+    if ($k === null) return new WP_Error('ordine', 'ordine non trovato');
+    if ($evento === 'ordine-pagato' && !$forza && !empty($ordini[$k]['sito']['avviata'])) return true;
+    $esito = sc_fabbrica_dispatch($evento, sc_fabbrica_dati($ordini[$k]));
+    $s = $ordini[$k]['sito'] ?? [];
+    $s['aggiornato'] = wp_date('d/m/Y H:i');
+    if ($evento === 'ordine-pagato') {
+        $s['avviata'] = $s['aggiornato'];
+        $s['tentativi'] = 0;
+        $s['stato'] = is_wp_error($esito) ? 'costruzione non partita' : 'in costruzione';
+    } elseif (is_wp_error($esito)) {
+        $s['stato'] = 'collegamento del dominio non partito';
+    }
+    if (is_wp_error($esito)) $s['note'] = [$esito->get_error_message()];
+    $ordini[$k]['sito'] = $s;
+    sc_ordini_scrivi($ordini);
+    if (is_wp_error($esito)) {
+        wp_mail(SC_DESTINATARIO, 'ATTENZIONE: sito NON in costruzione — ' . ($ordini[$k]['dominio'] ?? ''),
+            "La costruzione automatica del sito non è partita.\n\nMotivo: " . $esito->get_error_message()
+            . "\n\nDalla pagina «Ordini SitoComodo» puoi premere «Ricostruisci il sito».", ['Content-Type: text/plain; charset=UTF-8']);
+    }
+    return $esito;
+}
+
+add_action('sc_fabbrica_ricollega', function ($sessione) {
+    sc_fabbrica_avvia($sessione, 'collega-dominio', true);
+});
+
+function sc_fabbrica_email_cliente($o, $url) {
+    $a = sanitize_email((string) ($o['pagamento']['email_cliente'] ?? '')) ?: sanitize_email((string) ($o['email'] ?? ''));
+    if (!$a) return false;
+    $nome = trim((string) ($o['pagamento']['nome_cliente'] ?? ''));
+    $righe = [
+        'Buongiorno' . ($nome !== '' ? ' ' . strtok($nome, ' ') : '') . ',',
+        '',
+        'il sito di ' . ($o['nome'] ?? 'la tua attività') . ' è online ed è raggiungibile all\'indirizzo:',
+        $url,
+        '',
+        'Ti consigliamo di controllarlo anche da smartphone. Se desideri modificare un testo, una foto o un orario, rispondi a questa email:',
+        'le piccole modifiche sono gratuite nei primi 14 giorni dalla consegna. Se il sito non ti soddisfa, puoi chiederci di rifarlo gratuitamente entro 48 ore.',
+        '',
+        'Grazie per aver scelto SitoComodo.',
+        '',
+        'Il team di SitoComodo',
+        SC_DESTINATARIO,
+    ];
+    return wp_mail($a, 'Il tuo sito è online – ' . ($o['dominio'] ?? ''), implode("\n", $righe),
+        ['Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . SC_DESTINATARIO]);
+}
+
+add_action('rest_api_init', function () {
+    // la fabbrica su GitHub manda qui l'esito (solo con il segreto condiviso)
+    register_rest_route('sitocomodo/v1', '/esito', [
+        'methods' => 'POST',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            $segreto = (string) get_option('sc_fabbrica_segreto', '');
+            if ($segreto === '' || !hash_equals($segreto, (string) $r->get_header('x_sc_segreto'))) {
+                return new WP_REST_Response(['errore' => 'non autorizzato'], 401);
+            }
+            $d = $r->get_json_params();
+            if (!is_array($d)) return new WP_REST_Response(['errore' => 'dati mancanti'], 400);
+            $stati = ['pubblicato', 'dominio_in_attesa', 'prova_pubblicata', 'da_controllare', 'errore'];
+            $stato = in_array(($d['stato'] ?? ''), $stati, true) ? $d['stato'] : 'errore';
+            $testi = function ($v) { return array_slice(array_map(function ($x) { return mb_substr(sanitize_text_field((string) $x), 0, 400); }, is_array($v) ? $v : []), 0, 30); };
+            $s = [
+                'stato' => $stato, 'aggiornato' => wp_date('d/m/Y H:i'),
+                'url_anteprima' => esc_url_raw((string) ($d['url_anteprima'] ?? '')), 'url_finale' => esc_url_raw((string) ($d['url_finale'] ?? '')),
+                'note' => $testi($d['note'] ?? []), 'note_per_giuseppe' => $testi($d['note_per_giuseppe'] ?? []),
+                'avvisi' => $testi($d['avvisi'] ?? []), 'run' => esc_url_raw((string) ($d['run'] ?? '')),
+            ];
+            $dominio = sanitize_text_field((string) ($d['dominio'] ?? ''));
+            $righe = ['Stato: ' . $stato];
+            if ($s['url_finale']) $righe[] = 'Sito: ' . $s['url_finale'];
+            if ($s['url_anteprima']) $righe[] = 'Anteprima: ' . $s['url_anteprima'];
+            foreach (['note_per_giuseppe' => 'Da ricontrollare', 'avvisi' => 'Avvisi del generatore', 'note' => 'Pubblicazione'] as $campo => $titolo) {
+                if ($s[$campo]) { $righe[] = ''; $righe[] = $titolo . ':'; foreach ($s[$campo] as $x) $righe[] = '- ' . $x; }
+            }
+            if ($s['run']) { $righe[] = ''; $righe[] = 'Dettagli e provini: ' . $s['run']; }
+            $intestazioni = ['Content-Type: text/plain; charset=UTF-8'];
+
+            if (!empty($d['prova'])) {
+                wp_mail(SC_DESTINATARIO, 'Prova della fabbrica: ' . $stato, implode("\n", $righe), $intestazioni);
+                return ['ok' => true, 'prova' => true];
+            }
+            $ordini = sc_ordini_leggi();
+            $k = sc_fabbrica_trova($ordini, sanitize_text_field((string) ($d['sessione'] ?? '')));
+            if ($k === null) {
+                wp_mail(SC_DESTINATARIO, 'ATTENZIONE: esito della fabbrica senza ordine — ' . $dominio, implode("\n", $righe), $intestazioni);
+                return new WP_REST_Response(['errore' => 'ordine non trovato'], 404);
+            }
+            $prima = $ordini[$k]['sito'] ?? [];
+            $s['avviata'] = $prima['avviata'] ?? '';
+            $s['tentativi'] = (int) ($prima['tentativi'] ?? 0);
+            $s['email_cliente'] = $prima['email_cliente'] ?? '';
+            if (!$s['url_anteprima']) $s['url_anteprima'] = $prima['url_anteprima'] ?? '';
+            if ($stato === 'dominio_in_attesa') {
+                $s['tentativi']++;
+                if ($s['tentativi'] <= 48) {
+                    wp_schedule_single_event(time() + 15 * MINUTE_IN_SECONDS, 'sc_fabbrica_ricollega', [$ordini[$k]['pagamento']['sessione']]);
+                } elseif ($s['tentativi'] === 49) {
+                    $righe[] = '';
+                    $righe[] = 'Dopo 12 ore il dominio non è ancora collegato: smetto di riprovare, va guardato a mano.';
+                    $stato = 'dominio da controllare a mano';
+                    $s['stato'] = $stato;
+                }
+            }
+            if ($stato === 'pubblicato' && $s['email_cliente'] === '' && get_option('sc_email_cliente', '') === '1') {
+                $s['email_cliente'] = sc_fabbrica_email_cliente($ordini[$k], $s['url_finale']) ? wp_date('d/m/Y H:i') : 'non partita';
+                $righe[] = '';
+                $righe[] = 'Email al cliente: ' . $s['email_cliente'];
+            }
+            $ordini[$k]['sito'] = $s;
+            sc_ordini_scrivi($ordini);
+            if (($prima['stato'] ?? '') !== $s['stato']) {
+                wp_mail(SC_DESTINATARIO, 'Sito ' . $dominio . ': ' . $s['stato'], implode("\n", $righe), $intestazioni);
+            }
+            return ['ok' => true];
+        },
+    ]);
+});
