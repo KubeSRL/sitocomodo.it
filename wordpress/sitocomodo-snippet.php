@@ -933,6 +933,7 @@ function sc_live_fonte($s) {
     $s = strtolower(trim((string) $s));
     if ($s === '') return 'Diretto';
     if ($s === 'meta-ads') return 'Inserzioni Meta';
+    if ($s === 'an') return 'Audience Network';
     if (strpos($s, 'instagram') !== false || $s === 'ig') return 'Instagram';
     if (strpos($s, 'facebook') !== false || $s === 'fb') return 'Facebook';
     if (strpos($s, 'google') !== false) return 'Google';
@@ -981,9 +982,14 @@ add_action('rest_api_init', function () {
                 $giorni = get_option('sc_live_giorni', []);
                 if (!is_array($giorni)) $giorni = [];
                 $g = wp_date('Y-m-d');
-                $giorni[$g]['passi'][$passo] = (int) ($giorni[$g]['passi'][$passo] ?? 0) + 1;
                 $f = sc_live_fonte($d['s'] ?? '');
-                if ($passo === 'home' || $f !== 'Diretto') $giorni[$g]['fonti'][$f] = (int) ($giorni[$g]['fonti'][$f] ?? 0) + 1;
+                if ($f === 'Audience Network') {
+                    // tenute a parte: Audience Network è escluso dalle inserzioni, non entra nei passi né nelle provenienze
+                    $giorni[$g]['an'][$passo] = (int) ($giorni[$g]['an'][$passo] ?? 0) + 1;
+                } else {
+                    $giorni[$g]['passi'][$passo] = (int) ($giorni[$g]['passi'][$passo] ?? 0) + 1;
+                    if ($passo === 'home' || $f !== 'Diretto') $giorni[$g]['fonti'][$f] = (int) ($giorni[$g]['fonti'][$f] ?? 0) + 1;
+                }
                 ksort($giorni);
                 update_option('sc_live_giorni', array_slice($giorni, -60, null, true), false);
             }
@@ -1004,8 +1010,10 @@ function sc_live_dati() {
     $attivi = get_option('sc_live_attivi', []);
     $adesso = array_fill_keys(array_keys($passi), 0);
     $persone = [];
+    $an_adesso = 0;
     foreach ((is_array($attivi) ? $attivi : []) as $a) {
         if ($ora - (int) ($a['t'] ?? 0) > 45) continue;
+        if (($a['fonte'] ?? '') === 'Audience Network') { $an_adesso++; continue; }
         $p = $a['passo'] ?? 'altro';
         $adesso[$p] = ($adesso[$p] ?? 0) + 1;
         $persone[] = ['passo' => $passi[$p] ?? $p, 'chiave' => $p, 'minuti' => max(0, (int) floor(($ora - (int) ($a['da'] ?? $ora)) / 60)), 'fonte' => $a['fonte'] ?? ''];
@@ -1016,11 +1024,20 @@ function sc_live_dati() {
     $giorni = get_option('sc_live_giorni', []);
     $giorni = is_array($giorni) ? $giorni : [];
     $oggi = wp_date('Y-m-d');
+    // Audience Network: aperture tenute a parte. Quelle di prima della separazione (23/11) erano salvate come
+    // provenienza «an» e sono comprese anche nei passi: le contiamo qui e le segnaliamo come «vecchie».
+    $an = function ($gg) {
+        $nuove = array_sum(array_map('intval', is_array($gg['an'] ?? null) ? $gg['an'] : []));
+        $vecchie = (int) ($gg['fonti']['an'] ?? 0);
+        return ['totale' => $nuove + $vecchie, 'vecchie' => $vecchie];
+    };
     $settimana = [];
     for ($i = 6; $i >= 0; $i--) {
         $g = wp_date('Y-m-d', $ora - $i * DAY_IN_SECONDS);
-        $settimana[] = ['giorno' => wp_date('D j', $ora - $i * DAY_IN_SECONDS), 'passi' => $giorni[$g]['passi'] ?? new stdClass()];
+        $settimana[] = ['giorno' => wp_date('D j', $ora - $i * DAY_IN_SECONDS), 'passi' => $giorni[$g]['passi'] ?? new stdClass(), 'an' => $an($giorni[$g] ?? [])];
     }
+    $fonti_oggi = $giorni[$oggi]['fonti'] ?? [];
+    unset($fonti_oggi['an']);
 
     $carrelli = [];
     $pagati = [];
@@ -1051,9 +1068,9 @@ function sc_live_dati() {
 
     return [
         'ora' => wp_date('H:i:s'),
-        'adesso' => ['totale' => count($persone), 'passi' => $adesso, 'persone' => $persone, 'su_stripe' => $su_stripe_ora],
+        'adesso' => ['totale' => count($persone), 'passi' => $adesso, 'persone' => $persone, 'su_stripe' => $su_stripe_ora, 'an' => $an_adesso],
         'nomi_passi' => $passi,
-        'oggi' => ['passi' => $giorni[$oggi]['passi'] ?? new stdClass(), 'fonti' => $giorni[$oggi]['fonti'] ?? new stdClass(), 'pagati' => $pagati_oggi],
+        'oggi' => ['passi' => $giorni[$oggi]['passi'] ?? new stdClass(), 'fonti' => $fonti_oggi ?: new stdClass(), 'pagati' => $pagati_oggi, 'an' => $an($giorni[$oggi] ?? [])],
         'settimana' => $settimana,
         'carrelli' => $carrelli,
         'pagati' => $pagati,
@@ -1112,6 +1129,7 @@ function sc_pagina_live() {
 <h2>Oggi, passo per passo</h2>
 <div class="box imbuto" id="sc-imbuto"></div>
 <p class="agg" id="sc-fonti"></p>
+<p class="agg" id="sc-an"></p>
 
 <h2>Carrelli abbandonati</h2>
 <p class="agg">Hanno compilato il modulo ma non hanno pagato (ultimi 14 giorni). «Fermo su Stripe» vuol dire che sono arrivati alla pagina di pagamento di Stripe e non hanno finito.</p>
@@ -1122,6 +1140,7 @@ function sc_pagina_live() {
 
 <h2>Ultimi 7 giorni</h2>
 <div id="sc-settimana"></div>
+<p class="agg" id="sc-an-nota"></p>
 <p class="agg">Il conteggio è anonimo: niente cookie e niente dati personali dei visitatori. Le tue visite da collegato a WordPress non contano. La pagina si aggiorna da sola ogni 5 secondi.</p>
 </div>
 <script>
@@ -1141,6 +1160,8 @@ function sc_pagina_live() {
       var caldo = p.chiave === 'pagamento' || p.chiave === 'modulo';
       return '<div class="persona' + (caldo ? ' caldo' : '') + '"><span><strong>' + esc(p.passo) + '</strong> · da ' + esc(p.fonte || 'Diretto') + '</span><span>' + (p.minuti < 1 ? 'appena arrivato' : 'sul sito da ' + p.minuti + ' min') + '</span></div>';
     }).join('') : '<div class="vuoto">Nessuno sul sito in questo momento.</div>';
+    var anOra = d.adesso.an || 0;
+    if (anOra) $('sc-persone').innerHTML += '<p class="agg">Più ' + anOra + ' da Audience Network, ' + (anOra === 1 ? 'tenuto' : 'tenuti') + ' a parte.</p>';
     var oggi = d.oggi.passi || {}, max = 1;
     ORDINE.forEach(function(k){ max = Math.max(max, oggi[k] || 0); });
     $('sc-imbuto').innerHTML = ORDINE.map(function(k){
@@ -1149,6 +1170,9 @@ function sc_pagina_live() {
     }).join('');
     var f = d.oggi.fonti || {}, chiavi = Object.keys(f).sort(function(a,b){ return f[b] - f[a]; });
     $('sc-fonti').textContent = chiavi.length ? 'Da dove arrivano oggi: ' + chiavi.map(function(k){ return k + ' ' + f[k]; }).join(' · ') : '';
+    var an = d.oggi.an || {totale: 0, vecchie: 0}, nuove = an.totale - an.vecchie;
+    $('sc-an').textContent = !an.totale ? '' : 'Audience Network, tenuto a parte: ' + an.totale + (an.totale === 1 ? ' apertura' : ' aperture') + ' oggi. '
+      + (an.vecchie ? an.vecchie + ' sono di prima della separazione e restano anche nei passi qui sopra' + (nuove ? '; le altre ' + nuove + ' no.' : '.') : 'Non sono nei numeri qui sopra.');
     $('sc-carrelli').innerHTML = d.carrelli.length ? '<div class="tab"><table><thead><tr><th>Quando</th><th>Attività</th><th>Dominio</th><th>Contatti</th></tr></thead><tbody>' + d.carrelli.map(function(c){
       var tel = c.telefono || c.whatsapp, cont = [];
       if (tel) cont.push('<a href="tel:' + esc(tel.replace(/[^0-9+]/g, '')) + '">' + esc(tel) + '</a>');
@@ -1159,10 +1183,12 @@ function sc_pagina_live() {
     $('sc-ordini').innerHTML = d.pagati.length ? '<div class="tab"><table><thead><tr><th>Pagato</th><th>Attività</th><th>Dominio</th><th class="n">Importo</th><th class="nasc">Dominio su OVH</th></tr></thead><tbody>' + d.pagati.map(function(o){
       return '<tr><td>' + esc(o.quando) + '</td><td><strong>' + esc(o.nome) + '</strong></td><td>' + esc(o.dominio) + '</td><td class="n">' + esc(o.importo) + '</td><td class="nasc">' + esc(o.dominio_ovh || '—') + '</td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="vuoto">Ancora nessun ordine pagato.</div>';
-    $('sc-settimana').innerHTML = '<div class="tab"><table><thead><tr><th>Giorno</th><th class="n">Home</th><th class="n">Dominio</th><th class="n">Modulo</th><th class="n">Pagamento</th><th class="n">Pagato</th></tr></thead><tbody>' + d.settimana.map(function(g){
-      var p = g.passi || {};
-      return '<tr><td>' + esc(g.giorno) + '</td><td class="n">' + (p.home||0) + '</td><td class="n">' + (p.dominio||0) + '</td><td class="n">' + (p.modulo||0) + '</td><td class="n">' + (p.pagamento||0) + '</td><td class="n">' + (p.pagato||0) + '</td></tr>';
+    $('sc-settimana').innerHTML = '<div class="tab"><table><thead><tr><th>Giorno</th><th class="n">Home</th><th class="n">Dominio</th><th class="n">Modulo</th><th class="n">Pagamento</th><th class="n">Pagato</th><th class="n">Audience Network</th></tr></thead><tbody>' + d.settimana.map(function(g){
+      var p = g.passi || {}, a = g.an || {totale: 0, vecchie: 0};
+      return '<tr><td>' + esc(g.giorno) + '</td><td class="n">' + (p.home||0) + '</td><td class="n">' + (p.dominio||0) + '</td><td class="n">' + (p.modulo||0) + '</td><td class="n">' + (p.pagamento||0) + '</td><td class="n">' + (p.pagato||0) + '</td><td class="n">' + (a.totale||0) + (a.vecchie ? '*' : '') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
+    var conVecchie = d.settimana.some(function(g){ return g.an && g.an.vecchie; });
+    $('sc-an-nota').textContent = conVecchie ? '* Prima della separazione (23/11) le aperture da Audience Network erano contate anche nei passi di quel giorno.' : '';
   }
   function carica(){
     fetch(URL_DATI, {headers: {'X-WP-Nonce': NONCE}, credentials: 'same-origin'})
