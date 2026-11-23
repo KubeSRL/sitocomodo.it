@@ -149,6 +149,8 @@ function sc_campi_ordine() {
         'telefono' => 'Telefono', 'whatsapp' => 'WhatsApp', 'email' => 'Email per i contatti', 'indirizzo' => 'Indirizzo',
         'orari' => 'Orari', 'colori' => 'Colori preferiti', 'social' => 'Link social', 'google' => 'Scheda Google Maps',
         'modello_scelto' => 'Modello', 'carattere_scelto' => 'Carattere dei titoli',
+        // 23/11/2026, «Rifai il tuo sito»: dove ha comprato dominio/hosting e con cosa è fatto il sito di adesso
+        'hosting_attuale' => 'Dove ha comprato il dominio', 'fatto_con' => 'Con cosa è fatto il sito di adesso',
     ];
 }
 
@@ -205,6 +207,8 @@ function sc_ricevi_ordine() {
     $dati['modello'] = sc_campo('modello', 40);
     $dati['carattere'] = sc_campo('carattere', 40);
     $dati['diritti'] = isset($_POST['diritti']) ? 'sì' : 'no';
+    $dati['offerta'] = sc_campo('offerta', 10) === 'rifai' ? 'rifai' : 'nuovo';   // «rifai» = rifacimento a 79 €, dominio del cliente
+    $dati['dns_rilevati'] = sc_campo('dns_rilevati', 300);
     $dati['riferimento_stripe'] = str_replace('.', '_', $dominio);
     $dati['ricevuto'] = wp_date('d/m/Y H:i:s');
 
@@ -255,8 +259,14 @@ function sc_ricevi_ordine() {
 
 // email a info@ con tutto l'ordine: parte solo a pagamento confermato
 function sc_manda_email_pagato($dati, $pag) {
-    $righe = ['NUOVO ORDINE SITOCOMODO — PAGATO ✔',
+    $rifai = ($dati['offerta'] ?? '') === 'rifai';
+    $righe = ['NUOVO ORDINE SITOCOMODO — PAGATO ✔' . ($rifai ? ' — RIFAI IL TUO SITO' : ''),
               'Pagamento: ' . $pag['importo'] . ' il ' . $pag['quando'] . ' (riferimento Stripe: ' . ($dati['riferimento_stripe'] ?? '') . ')'];
+    if (!empty($pag['da_controllare'])) {
+        $righe[] = '';
+        $righe[] = 'ATTENZIONE: l\'importo pagato (' . $pag['importo'] . ') non corrisponde a questo tipo d\'ordine (' . ($rifai ? 'rifacimento, 79 €' : 'sito nuovo, 99 €') . ').';
+        $righe[] = 'Non ho comprato il dominio e non ho avviato la costruzione: controlla il pagamento su Stripe e il cliente.';
+    }
     if (!empty($pag['email_cliente'])) {
         $righe[] = 'Email di chi ha pagato: ' . $pag['email_cliente'] . (!empty($pag['nome_cliente']) ? ' (' . $pag['nome_cliente'] . ')' : '');
     }
@@ -265,17 +275,23 @@ function sc_manda_email_pagato($dati, $pag) {
         $righe[] = 'ATTENZIONE: è arrivato un pagamento ma non c\'è il modulo con testi e foto collegato a questo riferimento.';
         $righe[] = 'Contatta il cliente all\'email qui sopra per farti mandare i dati.';
     } else {
-        $righe[] = 'Dominio: ' . $dati['dominio'];
+        $righe[] = $rifai ? 'RIFAI IL TUO SITO (79 €): il dominio ' . $dati['dominio'] . ' resta al cliente, NON si compra.'
+                          : 'Dominio: ' . $dati['dominio'];
         foreach (sc_campi_ordine() as $k => $etichetta) {
             if (($dati[$k] ?? '') === '') continue;
             $righe[] = (strpos($dati[$k], "\n") !== false) ? "$etichetta:\n{$dati[$k]}" : "$etichetta: {$dati[$k]}";
         }
         $righe[] = 'Diritti su foto e testi confermati: ' . ($dati['diritti'] ?? '');
         $righe[] = '';
-        $righe[] = 'INTESTATARIO DEL DOMINIO:';
-        $righe[] = empty($dati['intestatario']) ? 'mancano i dati: il dominio va comprato a mano dopo averli chiesti al cliente'
-                                                : sc_intestatario_testo($dati['intestatario']);
-        $righe[] = 'Il dominio viene comprato in automatico su OVH: ti arriva un\'altra email con l\'esito.';
+        if ($rifai) {
+            if (!empty($dati['dns_rilevati'])) $righe[] = 'DNS di adesso: ' . $dati['dns_rilevati'];
+            $righe[] = 'La fabbrica legge il sito vecchio, prepara il nuovo su un indirizzo provvisorio e manda al cliente la guida per collegare il dominio (senza toccare l\'email).';
+        } else {
+            $righe[] = 'INTESTATARIO DEL DOMINIO:';
+            $righe[] = empty($dati['intestatario']) ? 'mancano i dati: il dominio va comprato a mano dopo averli chiesti al cliente'
+                                                    : sc_intestatario_testo($dati['intestatario']);
+            $righe[] = 'Il dominio viene comprato in automatico su OVH: ti arriva un\'altra email con l\'esito.';
+        }
         $righe[] = '';
         $righe[] = 'FOTO E LOGO (' . count($dati['file'] ?? []) . '):';
         foreach (($dati['file'] ?? []) as $s) {
@@ -295,7 +311,8 @@ function sc_manda_email_pagato($dati, $pag) {
     }
     $oggetto = empty($dati['dominio'])
         ? 'Pagamento SitoComodo senza modulo: ' . ($dati['riferimento_stripe'] ?? '')
-        : 'Ordine PAGATO SitoComodo: ' . $dati['dominio'] . (($dati['nome'] ?? '') !== '' ? ' (' . $dati['nome'] . ')' : '');
+        : (!empty($pag['da_controllare']) ? 'ATTENZIONE importo da controllare — ' : '')
+          . 'Ordine PAGATO SitoComodo' . ($rifai ? ' (rifai il sito)' : '') . ': ' . $dati['dominio'] . (($dati['nome'] ?? '') !== '' ? ' (' . $dati['nome'] . ')' : '');
     $errore = '';
     $spia = function ($e) use (&$errore) { $errore = is_wp_error($e) ? $e->get_error_message() : ''; };
     add_action('wp_mail_failed', $spia);
@@ -375,6 +392,14 @@ add_action('rest_api_init', function () {
             } else {
                 $ordini[$indice]['stato'] = 'pagato';
             }
+            // 23/11/2026: l'importo (prima di eventuali sconti) deve corrispondere al tipo d'ordine: 99 € sito nuovo, 79 € rifacimento.
+            // Chi paga 79 € su un ordine «sito nuovo» non fa comprare il dominio né partire la fabbrica.
+            $rifai = ($ordini[$indice]['offerta'] ?? '') === 'rifai';
+            $subtotale = (int) ($s['amount_subtotal'] ?? ($s['amount_total'] ?? 0));
+            if (!empty($ordini[$indice]['dominio']) && $subtotale < ($rifai ? 7900 : 9900)) {
+                $pag['da_controllare'] = true;
+                $ordini[$indice]['stato'] = 'pagato: importo da controllare';
+            }
             $ordini[$indice]['pagamento'] = $pag;
             if (empty($ordini[$indice]['intestatario'])) {   // dati arrivati prima del modulo, o senza modulo
                 $sospesi = get_option('sc_intestatari_sospesi', []);
@@ -386,9 +411,9 @@ add_action('rest_api_init', function () {
             }
             $ordini[$indice]['email_inviata'] = sc_manda_email_pagato($ordini[$indice], $pag);
             sc_ordini_scrivi($ordini);
-            // acquisto del dominio su OVH: subito dopo, fuori dalla risposta a Stripe
-            if (!empty($ordini[$indice]['dominio'])) {
-                wp_schedule_single_event(time(), 'sc_compra_dominio', [$sessione]);
+            // acquisto del dominio su OVH (sito nuovo) o costruzione diretta (rifacimento): subito dopo, fuori dalla risposta a Stripe
+            if (!empty($ordini[$indice]['dominio']) && empty($pag['da_controllare'])) {
+                wp_schedule_single_event(time(), $rifai ? 'sc_fabbrica_avvia_evento' : 'sc_compra_dominio', [$sessione]);
                 spawn_cron();
             }
             return ['ok' => true];
@@ -795,7 +820,8 @@ function sc_pagina_ordini() {
         foreach (($o['file'] ?? []) as $f) {
             $foto[] = '<a href="' . esc_url(sc_url_foto($o['cartella'], $f['file'])) . '" target="_blank">' . esc_html($f['file']) . '</a>';
         }
-        $det = '';
+        $det = (($o['offerta'] ?? '') === 'rifai') ? '<p><strong>RIFAI IL TUO SITO (79 €)</strong>: il dominio resta al cliente.'
+               . (!empty($o['dns_rilevati']) ? '<br>DNS di adesso: ' . esc_html($o['dns_rilevati']) : '') . '</p>' : '';
         foreach (sc_campi_ordine() as $k => $etichetta) {
             if (($o[$k] ?? '') === '') continue;
             $det .= '<p><strong>' . esc_html($etichetta) . ':</strong><br>' . nl2br(esc_html($o[$k])) . '</p>';
@@ -825,7 +851,7 @@ function sc_pagina_ordini() {
                   . '<input type="hidden" name="sc_fabbrica_riprova" value="' . esc_attr($o['pagamento']['sessione']) . '">'
                   . '<button class="button" onclick="return confirm(\'Ricostruisco e ripubblico il sito di ' . esc_js($o['dominio'] ?? '') . '?\')">Ricostruisci il sito</button></form>';
         }
-        if (!empty($o['pagamento']['sessione']) && !empty($o['dominio']) && (($o['dominio_acquisto']['stato'] ?? '') !== 'comprato')) {
+        if (!empty($o['pagamento']['sessione']) && !empty($o['dominio']) && (($o['offerta'] ?? '') !== 'rifai') && (($o['dominio_acquisto']['stato'] ?? '') !== 'comprato')) {
             $det .= '<form method="post">' . wp_nonce_field('sc_ovh', '_wpnonce', true, false)
                   . '<input type="hidden" name="sc_riprova" value="' . esc_attr($o['pagamento']['sessione']) . '">'
                   . '<button class="button" onclick="return confirm(\'Riprovo a comprare ' . esc_js($o['dominio']) . ' su OVH col credito prepagato?\')">Riprova acquisto dominio</button></form>';
@@ -923,7 +949,7 @@ function sc_live_script() {
 }
 
 function sc_live_passi() {
-    return ['home' => 'Home', 'esempi' => 'Guarda gli esempi', 'dominio' => 'Sceglie il modello', 'modulo' => 'Apre il modulo',
+    return ['home' => 'Home', 'esempi' => 'Guarda gli esempi', 'rifai' => 'Pagina «Rifai il tuo sito»', 'dominio' => 'Sceglie il modello', 'modulo' => 'Apre il modulo',
             'dati' => 'Ha compilato i dati', 'liberi' => 'Vede i domini liberi', 'scelto' => 'Ha scelto il dominio',
             'paga' => 'Clicca «Vai al pagamento»',
             'pagamento' => 'Pagina di pagamento', 'pagato' => 'Ha pagato (pagina grazie)', 'altro' => 'Altre pagine'];
@@ -938,7 +964,7 @@ function sc_live_passo($percorso) {
     $p = '/' . trim(strtolower((string) $percorso), '/') . '/';
     if ($p === '//' ) return 'home';
     if (strpos($p, '/esempi/') === 0) return 'esempi';
-    $mappa = ['/ordina/' => 'dominio', '/ordine/' => 'modulo', '/checkout/' => 'pagamento', '/grazie/' => 'pagato'];
+    $mappa = ['/rifai-il-tuo-sito/' => 'rifai', '/ordina/' => 'dominio', '/ordine/' => 'modulo', '/checkout/' => 'pagamento', '/grazie/' => 'pagato'];
     return $mappa[$p] ?? 'altro';
 }
 
@@ -1178,8 +1204,8 @@ function sc_pagina_live() {
   var $ = function(id){ return document.getElementById(id); };
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
   var tempo = function(m){ if (m == null) return ''; if (m < 1) return 'adesso'; if (m < 60) return m + ' min fa'; if (m < 1440) return Math.floor(m/60) + ' h fa'; return Math.floor(m/1440) + ' g fa'; };
-  var ORDINE = ['home','esempi','dominio','modulo','dati','liberi','scelto','paga','pagamento','pagato','altro'];
-  var COLONNE = [['home','Home'],['dominio','Modello'],['modulo','Modulo'],['dati','Dati'],['liberi','Domini liberi'],['scelto','Dominio scelto'],['paga','Vai al pagamento'],['pagamento','Pagamento'],['pagato','Pagato']];
+  var ORDINE = ['home','esempi','rifai','dominio','modulo','dati','liberi','scelto','paga','pagamento','pagato','altro'];
+  var COLONNE = [['home','Home'],['rifai','Rifai'],['dominio','Modello'],['modulo','Modulo'],['dati','Dati'],['liberi','Domini liberi'],['scelto','Dominio scelto'],['paga','Vai al pagamento'],['pagamento','Pagamento'],['pagato','Pagato']];
   function disegna(d){
     $('sc-agg').textContent = 'aggiornato alle ' + d.ora;
     $('sc-ora').textContent = d.adesso.totale;
@@ -1268,6 +1294,8 @@ function sc_fabbrica_dati($o) {
     $d['citta_intestatario'] = (string) ($i['citta'] ?? '');
     $d['provincia_intestatario'] = (string) ($i['provincia'] ?? '');
     $d['dominio_acquisto'] = (string) ($o['dominio_acquisto']['stato'] ?? '');
+    $d['offerta'] = ($o['offerta'] ?? '') === 'rifai' ? 'rifai' : 'nuovo';
+    foreach (['hosting_attuale', 'fatto_con', 'dns_rilevati'] as $k) $d[$k] = (string) ($o[$k] ?? '');
     $d['file'] = $file;
     return $d;
 }
@@ -1331,9 +1359,60 @@ function sc_fabbrica_avvia($sessione, $evento = 'ordine-pagato', $forza = false)
     return $esito;
 }
 
+add_action('sc_fabbrica_avvia_evento', function ($sessione) {   // «rifai»: niente dominio da comprare, si costruisce subito
+    sc_fabbrica_avvia($sessione);
+});
+
 add_action('sc_fabbrica_ricollega', function ($sessione) {
     sc_fabbrica_avvia($sessione, 'collega-dominio', true);
 });
+
+// ---------------------------------------------------------------- «Rifai il tuo sito» (23/11/2026): guida per collegare il dominio
+// Il dominio resta dal fornitore del cliente: lui (o Giuseppe con i suoi accessi) cambia solo il record A, www e aggiunge il TXT
+// ovhcontrol che OVH chiede per i domini esterni. MX e il resto non si toccano: l'email del cliente continua a funzionare.
+function sc_rifai_guida_testo($o, $dns) {
+    $d = (string) ($o['dominio'] ?? '');
+    $f = trim((string) ($o['hosting_attuale'] ?? ''));
+    $dove = ($f === '' || $f === 'Non lo so' || $f === 'Altro') ? 'del tuo fornitore' : 'di ' . $f;
+    $cf = stripos($f . ' ' . ($o['dns_rilevati'] ?? ''), 'cloudflare') !== false;
+    $r = ["Nel pannello $dove cerca la sezione dei DNS (di solito si chiama «Gestione DNS», «Zona DNS» o «DNS e nameserver») e fai queste tre modifiche:", '',
+          "1. Record A di $d (nome vuoto oppure @). Valore nuovo: " . $dns['ip'],
+          !empty($dns['ipv6']) ? "   Se c'è anche un record AAAA per $d, cancellalo oppure metti come valore: " . $dns['ipv6']
+                               : "   Se c'è anche un record AAAA per $d, cancellalo.",
+          "2. Record CNAME con nome www che punta a: $d",
+          "   Se per www c'è già un record A, cambialo con il valore " . $dns['ip'] . " (e cancella un eventuale AAAA per www).",
+          '3. Record TXT nuovo, con nome ovhcontrol. Valore: ' . $dns['token']];
+    if ($cf) $r[] = 'Su Cloudflare metti i record A e www su «Solo DNS» (la nuvola grigia).';
+    $r[] = '';
+    $r[] = 'Non toccare gli altri record, in particolare quelli MX: sono quelli della tua email, che continua a funzionare come prima.';
+    return $r;
+}
+
+function sc_rifai_email_guida($o, $dns, $anteprima, $promemoria = false) {
+    $a = sanitize_email((string) ($o['pagamento']['email_cliente'] ?? '')) ?: sanitize_email((string) ($o['email'] ?? ''));
+    if (!$a) return false;
+    $nome = trim((string) ($o['pagamento']['nome_cliente'] ?? ''));
+    $d = (string) ($o['dominio'] ?? '');
+    $attivita = (string) ($o['nome'] ?? '') !== '' ? $o['nome'] : 'la tua attività';
+    $righe = array_merge([
+        'Buongiorno' . ($nome !== '' ? ' ' . strtok($nome, ' ') : '') . ',', '',
+        $promemoria ? "il sito nuovo di $attivita è pronto e aspetta solo di essere collegato al tuo dominio $d. Lo trovi sempre qui:"
+                    : "il sito nuovo di $attivita è pronto. Puoi guardarlo qui, con calma:",
+        $anteprima, '',
+        "Quando ti piace, per metterlo sul tuo dominio $d servono tre impostazioni.", '',
+    ], sc_rifai_guida_testo($o, $dns), [
+        '',
+        'Fatto questo, il sito nuovo compare sul tuo dominio di solito entro qualche ora, con il lucchetto https: ti scriviamo noi quando è online. Fino ad allora resta online il sito vecchio.',
+        '',
+        'Se non ti va o non ci riesci, rispondi a questa email: lo facciamo noi. Ci serve solo l\'accesso al pannello del tuo dominio.',
+        'Se il sito nuovo non ti convince, puoi chiederci di rifarlo gratuitamente entro 48 ore.',
+        '',
+        'Il team di SitoComodo',
+        SC_DESTINATARIO,
+    ]);
+    return wp_mail($a, ($promemoria ? 'Promemoria: ' : '') . 'Il tuo sito nuovo è pronto – ' . $d, implode("\n", $righe),
+        ['Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . SC_DESTINATARIO]);
+}
 
 function sc_fabbrica_email_cliente($o, $url) {
     $a = sanitize_email((string) ($o['pagamento']['email_cliente'] ?? '')) ?: sanitize_email((string) ($o['email'] ?? ''));
@@ -1348,6 +1427,7 @@ function sc_fabbrica_email_cliente($o, $url) {
         'Ti consigliamo di controllarlo anche da smartphone. Se desideri modificare un testo, una foto o un orario, rispondi a questa email:',
         'le piccole modifiche sono gratuite nei primi 14 giorni dalla consegna. Se il sito non ti soddisfa, puoi chiederci di rifarlo gratuitamente entro 48 ore.',
         '',
+        ...((($o['offerta'] ?? '') === 'rifai') ? ['Se paghi ancora un hosting solo per il sito vecchio, ora puoi disdirlo. Se nello stesso pacchetto hai anche dominio o email, non disdire: scrivici e ti diciamo cosa tenere.', ''] : []),
         'Grazie per aver scelto SitoComodo.',
         '',
         'Il team di SitoComodo',
@@ -1399,11 +1479,59 @@ add_action('rest_api_init', function () {
                 return new WP_REST_Response(['errore' => 'ordine non trovato'], 404);
             }
             $prima = $ordini[$k]['sito'] ?? [];
+            $rifai = ($ordini[$k]['offerta'] ?? '') === 'rifai';
+            $dd = is_array($d['dns'] ?? null) ? $d['dns'] : [];
+            $dns = ['ip' => (string) (filter_var($dd['ip'] ?? '', FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ?: ''),
+                    'ipv6' => (string) (filter_var($dd['ipv6'] ?? '', FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ?: ''),
+                    'token' => mb_substr(preg_replace('/[^A-Za-z0-9._-]/', '', (string) ($dd['token'] ?? '')), 0, 100)];
+            $s['dns'] = ($dns['ip'] && $dns['token']) ? $dns : ($prima['dns'] ?? []);
+            $s['email_guida'] = $prima['email_guida'] ?? '';
+            $s['promemoria'] = $prima['promemoria'] ?? '';
             $s['avviata'] = $prima['avviata'] ?? '';
             $s['tentativi'] = (int) ($prima['tentativi'] ?? 0);
             $s['email_cliente'] = $prima['email_cliente'] ?? '';
             if (!$s['url_anteprima']) $s['url_anteprima'] = $prima['url_anteprima'] ?? '';
-            if ($stato === 'dominio_in_attesa') {
+            $sessione_k = $ordini[$k]['pagamento']['sessione'] ?? '';
+            if ($stato === 'dominio_in_attesa' && $rifai) {
+                // il dominio lo collega il cliente: guida subito, promemoria dopo 24 ore, Giuseppe avvisato dopo 2 giorni
+                $s['tentativi']++;
+                $n = $s['tentativi'];
+                $guida_ok = !empty($s['dns']['ip']) && !empty($s['dns']['token']);
+                $email_on = get_option('sc_email_cliente', '') === '1';
+                if ($s['email_guida'] === '') {
+                    if (!$guida_ok) {
+                        $righe[] = ''; $righe[] = 'ATTENZIONE: mancano l\'indirizzo IP o il token ovhcontrol: la guida al cliente NON è partita.';
+                        $s['email_guida'] = 'mancano i dati';
+                    } elseif ($email_on && $s['url_anteprima']) {
+                        $s['email_guida'] = sc_rifai_email_guida($ordini[$k], $s['dns'], $s['url_anteprima']) ? wp_date('d/m/Y H:i') : 'non partita';
+                        $righe[] = ''; $righe[] = 'Guida per collegare il dominio mandata al cliente: ' . $s['email_guida'];
+                    } else {
+                        $righe[] = ''; $righe[] = 'Le email ai clienti sono spente: manda tu al cliente l\'anteprima (' . $s['url_anteprima'] . ') e questa guida:';
+                        $righe = array_merge($righe, sc_rifai_guida_testo($ordini[$k], $s['dns']));
+                        $s['email_guida'] = 'da mandare a mano';
+                    }
+                }
+                if ($n === 48 && $s['promemoria'] === '' && $guida_ok && $email_on && $s['url_anteprima']) {
+                    $s['promemoria'] = sc_rifai_email_guida($ordini[$k], $s['dns'], $s['url_anteprima'], true) ? wp_date('d/m/Y H:i') : 'non partito';
+                }
+                if ($n >= 96) {
+                    $stato = 'dominio del cliente da collegare a mano';
+                    $s['stato'] = $stato;
+                    if ($n === 96) {
+                        $righe[] = ''; $righe[] = 'Dopo 2 giorni il dominio del cliente non è ancora collegato: chiamalo. Se ti dà l\'accesso al pannello del suo dominio, fai tu queste modifiche:';
+                        if ($guida_ok) $righe = array_merge($righe, sc_rifai_guida_testo($ordini[$k], $s['dns']));
+                    }
+                }
+                if ($n < 96) {
+                    wp_schedule_single_event(time() + 30 * MINUTE_IN_SECONDS, 'sc_fabbrica_ricollega', [$sessione_k]);
+                } elseif ($n < 144) {
+                    wp_schedule_single_event(time() + 6 * HOUR_IN_SECONDS, 'sc_fabbrica_ricollega', [$sessione_k]);
+                } else {
+                    $righe[] = ''; $righe[] = 'Dopo 14 giorni smetto di controllare: il dominio va collegato a mano, poi premi «Ricostruisci il sito».';
+                    $stato = 'dominio da controllare a mano';
+                    $s['stato'] = $stato;
+                }
+            } elseif ($stato === 'dominio_in_attesa') {
                 $s['tentativi']++;
                 if ($s['tentativi'] <= 48) {
                     wp_schedule_single_event(time() + 15 * MINUTE_IN_SECONDS, 'sc_fabbrica_ricollega', [$ordini[$k]['pagamento']['sessione']]);
