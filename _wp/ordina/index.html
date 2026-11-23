@@ -8,7 +8,23 @@
 <meta name="theme-color" content="#FDE047">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<script>
+/* 23/11/2026: offerta «Rifai il tuo sito» (79 €). /ordina/?offerta=rifai la accende, /ordina/ senza parametro la spegne;
+   le altre pagine la leggono dai dati salvati. I testi delle due offerte sono nella pagina: .solo-nuovo / .solo-rifai */
+(function(){
+  var K = 'sitocomodo_ordine', o = {};
+  try { o = JSON.parse(localStorage.getItem(K) || '{}') || {}; } catch(e) {}
+  var q = new URLSearchParams(location.search).get('offerta');
+  var m = location.pathname.slice(-8) === '/ordina/' ? (q === 'rifai' ? 'rifai' : 'nuovo') : (q === 'rifai' || q === 'nuovo' ? q : (o.offerta || 'nuovo'));
+  if (o.offerta !== m) { o.offerta = m; try { localStorage.setItem(K, JSON.stringify(o)); } catch(e) {} }
+  document.documentElement.setAttribute('data-offerta', m);
+  if (m === 'rifai') document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('a[href$="ordina/"]').forEach(function(a){ a.setAttribute('href', a.getAttribute('href') + '?offerta=rifai'); });
+  });
+})();
+</script>
 <style>
+html[data-offerta=rifai] .solo-nuovo,html:not([data-offerta=rifai]) .solo-rifai{display:none!important}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
@@ -115,17 +131,19 @@ legend{font-size:22px;font-weight:700;margin-bottom:6px;padding:0}
 <header class="testata"><div>
 <a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
 <ol class="passi" id="passi" aria-label="In 3 passaggi hai il tuo sito">
-<li aria-current="step" data-passo="1"><span>1. Scegli il sito</span></li>
-<li data-passo="2"><span>2. Logo e attività</span></li>
-<li data-passo="3"><span>3. Dominio e pagamento</span></li>
+<li aria-current="step" data-passo="1">1. Scegli il sito</li>
+<li data-passo="2">2. Logo e attività</li>
+<li data-passo="3"><span class="solo-nuovo">3. Dominio e pagamento</span><span class="solo-rifai">3. Il tuo sito e pagamento</span></li>
 </ol>
 </div></header>
 <div class="corpo">
 <main class="scheda">
 <div>
 <h1>Scegli come sarà il tuo sito</h1>
-<p class="intro">In 3 passaggi hai il tuo sito: scegli il modello, mandaci il logo e due informazioni sulla tua attività, prendi il dominio e paghi. Ci vogliono 5 minuti.</p>
-<p class="offerta">Sito vetrina a 99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</p>
+<p class="intro solo-nuovo">In 3 passaggi hai il tuo sito: scegli il modello, mandaci il logo e due informazioni sulla tua attività, prendi il dominio e paghi. Ci vogliono 5 minuti.</p>
+<p class="intro solo-rifai">In 3 passaggi hai il sito nuovo: scegli il modello, mandaci il logo e due informazioni sulla tua attività, dicci dov'è il sito di adesso e paghi. Ci vogliono 5 minuti.</p>
+<p class="offerta solo-nuovo">Sito vetrina a 99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</p>
+<p class="offerta solo-rifai">Rifai il tuo sito a 79 € IVA inclusa, sul dominio che hai già. Se non ti piace, lo rifacciamo gratis.</p>
 </div>
 <form id="scegli" novalidate>
 <fieldset class="gruppo" aria-describedby="nota-modelli">
