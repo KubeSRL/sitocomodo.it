@@ -913,12 +913,25 @@ function sc_live_script() {
         . 'fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:b,keepalive:true}).catch(function(){});}'
         . 'm("vista");setInterval(function(){if(document.visibilityState==="visible")m("ping");},20000);'
         . 'document.addEventListener("visibilitychange",function(){m(document.visibilityState==="visible"?"ping":"via");});'
-        . 'addEventListener("pagehide",function(){m("via");});}catch(e){}})();</script>';
+        . 'addEventListener("pagehide",function(){m("via");});'
+        // i quattro passaggi dentro /ordine/: li chiama la pagina del modulo, ognuno al massimo una volta per pagina
+        . 'var fatte={};window.scTappa=function(t){if(fatte[t])return;fatte[t]=1;'
+        . 'var b=JSON.stringify({id:id,p:location.pathname,e:"tappa",t:t,s:""});'
+        . 'if(navigator.sendBeacon&&navigator.sendBeacon(u,new Blob([b],{type:"application/json"})))return;'
+        . 'fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:b,keepalive:true}).catch(function(){});};'
+        . '}catch(e){}})();</script>';
 }
 
 function sc_live_passi() {
-    return ['home' => 'Home', 'esempi' => 'Guarda gli esempi', 'dominio' => 'Sceglie il dominio', 'modulo' => 'Compila il modulo',
+    return ['home' => 'Home', 'esempi' => 'Guarda gli esempi', 'dominio' => 'Sceglie il modello', 'modulo' => 'Apre il modulo',
+            'dati' => 'Ha compilato i dati', 'liberi' => 'Vede i domini liberi', 'scelto' => 'Ha scelto il dominio',
+            'paga' => 'Clicca «Vai al pagamento»',
             'pagamento' => 'Pagina di pagamento', 'pagato' => 'Ha pagato (pagina grazie)', 'altro' => 'Altre pagine'];
+}
+
+// passaggi dentro la pagina /ordine/ (passo 2 e 3), mandati dalla pagina con window.scTappa
+function sc_live_tappe() {
+    return ['dati', 'liberi', 'scelto', 'paga'];
 }
 
 function sc_live_passo($percorso) {
@@ -953,7 +966,7 @@ function sc_ts($testo) {
 }
 
 add_action('rest_api_init', function () {
-    // pubblico: riceve «vista», «ping» (ogni 20 secondi) e «via» dalle pagine del sito
+    // pubblico: riceve «vista», «ping» (ogni 20 secondi), «via» e «tappa» (passaggi dentro il modulo) dalle pagine del sito
     register_rest_route('sitocomodo/v1', '/live', [
         'methods' => 'POST',
         'permission_callback' => '__return_true',
@@ -964,8 +977,13 @@ add_action('rest_api_init', function () {
             if (!is_array($d)) return new WP_REST_Response(['ok' => false], 400);
             $id = preg_replace('/[^a-z0-9]/', '', strtolower((string) ($d['id'] ?? '')));
             $e = (string) ($d['e'] ?? '');
-            if ($id === '' || strlen($id) > 40 || !in_array($e, ['vista', 'ping', 'via'], true)) return new WP_REST_Response(['ok' => false], 400);
+            if ($id === '' || strlen($id) > 40 || !in_array($e, ['vista', 'ping', 'via', 'tappa'], true)) return new WP_REST_Response(['ok' => false], 400);
             $passo = sc_live_passo(substr((string) ($d['p'] ?? '/'), 0, 200));
+            if ($e === 'tappa') {
+                $t = (string) ($d['t'] ?? '');
+                if ($passo !== 'modulo' || !in_array($t, sc_live_tappe(), true)) return new WP_REST_Response(['ok' => false], 400);
+                $passo = $t;
+            }
             $ora = time();
             $attivi = get_option('sc_live_attivi', []);
             if (!is_array($attivi)) $attivi = [];
@@ -974,10 +992,20 @@ add_action('rest_api_init', function () {
                 unset($attivi[$id]);
             } elseif (isset($attivi[$id]) || count($attivi) < 500) {
                 $prima = $attivi[$id] ?? [];
+                // nel modulo il «ping» non deve far tornare indietro chi è già a un passaggio successivo
+                if ($e === 'ping' && $passo === 'modulo' && in_array($prima['passo'] ?? '', sc_live_tappe(), true)) $passo = $prima['passo'];
                 $attivi[$id] = ['passo' => $passo, 't' => $ora, 'da' => (int) ($prima['da'] ?? $ora),
                                 'fonte' => $e === 'vista' ? sc_live_fonte($d['s'] ?? '') : ($prima['fonte'] ?? 'Diretto')];
             }
             update_option('sc_live_attivi', $attivi, false);
+            if ($e === 'tappa') {
+                $giorni = get_option('sc_live_giorni', []);
+                if (!is_array($giorni)) $giorni = [];
+                $g = wp_date('Y-m-d');
+                $giorni[$g]['passi'][$passo] = (int) ($giorni[$g]['passi'][$passo] ?? 0) + 1;
+                ksort($giorni);
+                update_option('sc_live_giorni', array_slice($giorni, -60, null, true), false);
+            }
             if ($e === 'vista') {
                 $giorni = get_option('sc_live_giorni', []);
                 if (!is_array($giorni)) $giorni = [];
@@ -1098,11 +1126,12 @@ function sc_pagina_live() {
 @keyframes sc-pulsa{0%{box-shadow:0 0 0 0 rgba(0,163,42,.5)}70%{box-shadow:0 0 0 10px rgba(0,163,42,0)}100%{box-shadow:0 0 0 0 rgba(0,163,42,0)}}
 @media (prefers-reduced-motion:reduce){.sc-live .vivo{animation:none}}
 .sc-live h2{margin:28px 0 10px;font-size:17px}
-.sc-live .imbuto div{display:grid;grid-template-columns:170px 1fr 48px;align-items:center;gap:10px;margin:6px 0;font-size:14px}
+.sc-live .imbuto div{display:grid;grid-template-columns:200px 1fr 48px;align-items:center;gap:10px;margin:6px 0;font-size:14px}
 .sc-live .barra{height:14px;background:#f0f0f1;border-radius:3px;overflow:hidden}
 .sc-live .barra i{display:block;height:100%;background:#2271b1}
 .sc-live .imbuto b{text-align:right;font-variant-numeric:tabular-nums}
 .sc-live .tab{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sc-live .tab th{white-space:nowrap}
 .sc-live .stato{display:inline-block;white-space:nowrap;margin-top:3px;font-size:12px;padding:1px 6px;border-radius:3px;background:#f0f0f1;color:#50575e}
 .sc-live .stato.stripe{background:#fcf0d9;color:#8a5a00;font-weight:600}
 .sc-live table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #dcdcde}
@@ -1112,7 +1141,7 @@ function sc_pagina_live() {
 .sc-live .vuoto{color:#646970;padding:12px;background:#fff;border:1px dashed #c3c4c7;border-radius:6px}
 .sc-live .persona{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;background:#fff;border:1px solid #dcdcde;border-radius:6px;margin:6px 0;font-size:14px}
 .sc-live .persona.caldo{border-color:#00a32a;background:#f0faf2}
-@media (max-width:600px){.sc-live .imbuto div{grid-template-columns:120px 1fr 36px}.sc-live .num{font-size:32px}.sc-live .nasc{display:none}}
+@media (max-width:600px){.sc-live .imbuto div{grid-template-columns:140px 1fr 36px}.sc-live .num{font-size:32px}.sc-live .nasc{display:none}}
 </style>
 <h1><span class="vivo" aria-hidden="true"></span>SitoComodo Live <span class="agg" id="sc-agg">collegamento…</span></h1>
 
@@ -1149,7 +1178,8 @@ function sc_pagina_live() {
   var $ = function(id){ return document.getElementById(id); };
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
   var tempo = function(m){ if (m == null) return ''; if (m < 1) return 'adesso'; if (m < 60) return m + ' min fa'; if (m < 1440) return Math.floor(m/60) + ' h fa'; return Math.floor(m/1440) + ' g fa'; };
-  var ORDINE = ['home','esempi','dominio','modulo','pagamento','pagato','altro'];
+  var ORDINE = ['home','esempi','dominio','modulo','dati','liberi','scelto','paga','pagamento','pagato','altro'];
+  var COLONNE = [['home','Home'],['dominio','Modello'],['modulo','Modulo'],['dati','Dati'],['liberi','Domini liberi'],['scelto','Dominio scelto'],['paga','Vai al pagamento'],['pagamento','Pagamento'],['pagato','Pagato']];
   function disegna(d){
     $('sc-agg').textContent = 'aggiornato alle ' + d.ora;
     $('sc-ora').textContent = d.adesso.totale;
@@ -1157,7 +1187,7 @@ function sc_pagina_live() {
     $('sc-stripe').textContent = d.adesso.su_stripe;
     $('sc-pagati').textContent = d.oggi.pagati;
     $('sc-persone').innerHTML = d.adesso.persone.length ? d.adesso.persone.map(function(p){
-      var caldo = p.chiave === 'pagamento' || p.chiave === 'modulo';
+      var caldo = ['modulo','dati','liberi','scelto','paga','pagamento'].indexOf(p.chiave) >= 0;
       return '<div class="persona' + (caldo ? ' caldo' : '') + '"><span><strong>' + esc(p.passo) + '</strong> · da ' + esc(p.fonte || 'Diretto') + '</span><span>' + (p.minuti < 1 ? 'appena arrivato' : 'sul sito da ' + p.minuti + ' min') + '</span></div>';
     }).join('') : '<div class="vuoto">Nessuno sul sito in questo momento.</div>';
     var anOra = d.adesso.an || 0;
@@ -1183,9 +1213,9 @@ function sc_pagina_live() {
     $('sc-ordini').innerHTML = d.pagati.length ? '<div class="tab"><table><thead><tr><th>Pagato</th><th>Attività</th><th>Dominio</th><th class="n">Importo</th><th class="nasc">Dominio su OVH</th></tr></thead><tbody>' + d.pagati.map(function(o){
       return '<tr><td>' + esc(o.quando) + '</td><td><strong>' + esc(o.nome) + '</strong></td><td>' + esc(o.dominio) + '</td><td class="n">' + esc(o.importo) + '</td><td class="nasc">' + esc(o.dominio_ovh || '—') + '</td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="vuoto">Ancora nessun ordine pagato.</div>';
-    $('sc-settimana').innerHTML = '<div class="tab"><table><thead><tr><th>Giorno</th><th class="n">Home</th><th class="n">Dominio</th><th class="n">Modulo</th><th class="n">Pagamento</th><th class="n">Pagato</th><th class="n">Audience Network</th></tr></thead><tbody>' + d.settimana.map(function(g){
+    $('sc-settimana').innerHTML = '<div class="tab"><table><thead><tr><th>Giorno</th>' + COLONNE.map(function(c){ return '<th class="n">' + esc(c[1]) + '</th>'; }).join('') + '<th class="n">Audience Network</th></tr></thead><tbody>' + d.settimana.map(function(g){
       var p = g.passi || {}, a = g.an || {totale: 0, vecchie: 0};
-      return '<tr><td>' + esc(g.giorno) + '</td><td class="n">' + (p.home||0) + '</td><td class="n">' + (p.dominio||0) + '</td><td class="n">' + (p.modulo||0) + '</td><td class="n">' + (p.pagamento||0) + '</td><td class="n">' + (p.pagato||0) + '</td><td class="n">' + (a.totale||0) + (a.vecchie ? '*' : '') + '</td></tr>';
+      return '<tr><td>' + esc(g.giorno) + '</td>' + COLONNE.map(function(c){ return '<td class="n">' + (p[c[0]]||0) + '</td>'; }).join('') + '<td class="n">' + (a.totale||0) + (a.vecchie ? '*' : '') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
     var conVecchie = d.settimana.some(function(g){ return g.an && g.an.vecchie; });
     $('sc-an-nota').textContent = conVecchie ? '* Prima della separazione (23/11) le aperture da Audience Network erano contate anche nei passi di quel giorno.' : '';

@@ -487,6 +487,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     TESTI.forEach(function(k){ d[k] = document.getElementById(k).value.trim(); });
     d.foto = foto.files.length; d.logo_dopo = !logo.files.length && logoDopo.checked; d.quando = Date.now();
     scrivi(d);
+    if (window.scTappa) window.scTappa('dati');  // pannello Live, anonimo
     history.pushState(null, '', '#dominio');
     mostra(3);
   });
@@ -554,6 +555,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
         if (mio !== giro) return;
         if (ok === true) {
           x.r.li.className = 'riga libero'; x.stato.textContent = 'Libero'; notaLiberi.hidden = false;
+          if (window.scTappa) window.scTappa('liberi');
           var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Scegli'; btn.setAttribute('aria-pressed', 'false');
           btn.setAttribute('aria-label', 'Scegli ' + p[0]);
           btn.addEventListener('click', function(){
@@ -561,6 +563,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
             var o2 = leggi(); o2.dominio = sel; scrivi(o2);
             aggiorna();
             try { document.dispatchEvent(new CustomEvent('sc-dominio', {detail: sel})); } catch(e) {}
+            if (window.scTappa) window.scTappa('scelto');
             if (window.matchMedia('(max-width: 1000px)').matches) riep.scrollIntoView({behavior: 'smooth', block: 'start'});
           });
           x.r.btn = btn; x.r.li.append(btn);
@@ -587,6 +590,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   diritti.addEventListener('change', function(){ if (diritti.checked) { dirittiErrore.hidden = true; diritti.removeAttribute('aria-invalid'); } });
   vai.addEventListener('click', function(){
     if (!sel) { input.focus(); return; }
+    if (window.scTappa) window.scTappa('paga');
     if (!diritti.checked) {
       dirittiErrore.hidden = false; diritti.setAttribute('aria-invalid', 'true');
       diritti.focus({preventScroll: true}); diritti.closest('.conferma').scrollIntoView({behavior: 'smooth', block: 'center'});
