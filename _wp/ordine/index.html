@@ -132,22 +132,46 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 .cerca button{flex:0 0 auto;min-height:56px;padding:0 28px;border:0;border-radius:14px;background:#1D4ED8;color:#FFFFFF;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
 .esiti{display:flex;flex-direction:column;gap:12px}
 .intestazione{margin:0;font-size:15px;color:#4B5563}
-.risultati{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
-.riga{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:18px 20px;border-radius:18px;background:#FFFFFF;border:2px solid #111827}
-.riga.preso,.riga.attesa{background:#F9FAFB;border-color:#D1D5DB}
-.riga.scelto{background:#EEF4FF;border:3px solid #111827;padding:17px 19px}
-.riga .nome{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 240px}
-.riga .dom{font-weight:700;font-size:20px;overflow-wrap:anywhere}
-.etichetta{align-self:flex-start;background:#FED7AA;border:2px solid #111827;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
-.stato{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:15px;font-weight:600;color:#4B5563}
-.riga.libero .stato{color:#166534}
-.riga button{min-height:48px;min-width:110px;padding:0 20px;border-radius:14px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;border:2px solid #111827;background:#FFFFFF;color:#111827}
+/* 23/11/2026: domini in righe compatte (nome, stato e bottone sulla stessa riga) */
+.risultati{list-style:none;margin:0;padding:0;border:2px solid #111827;border-radius:18px;overflow:hidden;background:#FFFFFF}
+.risultati:empty{display:none}
+.riga{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:66px;padding:10px 12px 10px 18px;border-top:1px solid #E5E7EB}
+.riga:first-child{border-top:0}
+.riga.scelto{background:#EEF4FF}
+.riga .nome{display:flex;flex-direction:column;gap:3px;min-width:0}
+.riga .dom{font-weight:700;font-size:19px;overflow-wrap:anywhere}
+.riga .sotto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:14px;font-weight:600;color:#4B5563}
+.riga.libero .sotto{color:#166534}
+.riga.preso .dom{color:#6B7280}
+.etichetta{background:#FED7AA;border:1.5px solid #111827;border-radius:999px;padding:0 8px;font-size:12px;font-weight:700;color:#111827}
+.riga button{flex:none;min-height:46px;min-width:96px;padding:0 16px;border-radius:12px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;border:2px solid #111827;background:#FFFFFF;color:#111827}
 .riga.scelto button{background:#1D4ED8;color:#FFFFFF}
+/* 23/11/2026: promemoria del prezzo, logo da mandare dopo, errori sotto il campo, aiuto */
+.promemoria{margin:0;background:#FEF3C7;border-bottom:2px solid #111827}
+.promemoria span{display:block;max-width:860px;margin:0 auto;padding:10px 24px;font-size:15px;font-weight:600;line-height:1.45;color:#111827}
+.blocco-logo{gap:10px}
+.file-nascosto{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.campo>.bottone-carica{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:0 18px;border:2px solid #111827;border-radius:14px;background:#FFFFFF;font-weight:700;font-size:17px;color:#111827;cursor:pointer;box-shadow:3px 3px 0 #111827;text-align:center}
+.campo>.bottone-carica:hover{background:#EEF4FF}
+.blocco-logo:has(.file-nascosto:focus-visible) .bottone-carica{outline:3px solid #F97316;outline-offset:2px}
+.blocco-logo.con-file .bottone-carica{background:#F0FDF4;border-color:#166534;box-shadow:3px 3px 0 #166534}
+.blocco-logo.dopo .bottone-carica{opacity:.45}
+.blocco-logo[data-errore] .bottone-carica{border-color:#B91C1C;box-shadow:3px 3px 0 #B91C1C}
+.campo>.logo-dopo{display:flex;gap:12px;align-items:flex-start;padding:14px;border:2px solid #9CA3AF;border-radius:14px;background:#FFFFFF;cursor:pointer;font-weight:400}
+.campo>.logo-dopo:has(input:checked){border-color:#111827;background:#EEF4FF}
+.campo .logo-dopo input[type=checkbox]{width:22px;height:22px;min-height:0;margin:1px 0 0;padding:0;border:revert;border-radius:revert;flex:none}
+.logo-dopo b{display:block;font-size:16px;font-weight:700;color:#111827}
+.logo-dopo span span{display:block;margin-top:2px;font-size:14px;line-height:1.45;color:#4B5563}
+.errore-campo{font-size:14px;font-weight:600;line-height:1.45;color:#B91C1C}
+.aiuto-contatto{display:flex;align-items:center;gap:8px;margin:0;font-size:15px;font-weight:600;color:#166534}
+.aiuto-contatto a{color:#166534}
+.aiuto-contatto svg{flex:none}
 @media (max-width:640px){
   .cerca{box-shadow:4px 4px 0 #111827}
   .cerca button{flex:1 1 100%}
-  .riga{padding:14px 16px}.riga.scelto{padding:13px 15px}
-  .riga .dom{font-size:18px}
+  .riga{padding:10px 10px 10px 14px}
+  .riga .dom{font-size:17px}
+  .promemoria span{padding:10px 16px;font-size:14px}
 }
 </style>
 </head>
@@ -160,12 +184,13 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <li data-passo="3"><span>3. Dominio e pagamento</span></li>
 </ol>
 </div></header>
+<p class="promemoria"><span>99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</span></p>
 <div class="corpo stretto">
 <main class="scheda" id="passo2">
 <form id="modulo" novalidate>
 <div>
-<h1>Mandaci il logo e due informazioni</h1>
-<p class="intro">Bastano nome, telefono, email e il logo: i testi li scriviamo noi partendo dalla tua attività. Il resto è facoltativo.</p>
+<h1>Due informazioni sulla tua attività</h1>
+<p class="intro">Ci servono nome, attività, telefono ed email, più il logo se ce l'hai. I testi li scriviamo noi.</p>
 <p class="scelta-fatta" id="scelta-fatta"></p>
 </div>
 
@@ -173,11 +198,13 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <legend>La tua attività</legend>
 <div class="campo">
 <label for="nome">Nome dell'attività</label>
-<input id="nome" name="nome" type="text" placeholder="Es. Pizzeria da Mario" required autocomplete="organization" maxlength="80">
+<input id="nome" name="nome" type="text" placeholder="Es. Pizzeria da Mario" aria-describedby="nome-errore" required autocomplete="organization" maxlength="80">
+<span class="errore-campo" id="nome-errore" hidden></span>
 </div>
 <div class="campo">
 <label for="tipo">Che attività è</label>
-<input id="tipo" name="tipo" type="text" placeholder="Es. pizzeria, idraulico, parrucchiera" required maxlength="80">
+<input id="tipo" name="tipo" type="text" placeholder="Es. pizzeria, idraulico, parrucchiera" aria-describedby="tipo-errore" required maxlength="80">
+<span class="errore-campo" id="tipo-errore" hidden></span>
 </div>
 </fieldset>
 
@@ -186,22 +213,29 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <div class="riga2">
 <div class="campo">
 <label for="telefono">Telefono</label>
-<input id="telefono" name="telefono" type="tel" required autocomplete="tel">
+<input id="telefono" name="telefono" type="tel" aria-describedby="telefono-nota telefono-errore" required autocomplete="tel">
+<span class="errore-campo" id="telefono-errore" hidden></span>
+<span id="telefono-nota" class="aiuto">Compare sul sito per farti chiamare.</span>
 </div>
 <div class="campo">
-<label for="email">Email per i contatti</label>
-<input id="email" name="email" type="email" required autocomplete="email">
+<label for="email">Email</label>
+<input id="email" name="email" type="email" aria-describedby="email-nota email-errore" required autocomplete="email">
+<span class="errore-campo" id="email-errore" hidden></span>
+<span id="email-nota" class="aiuto">Qui ti arrivano i messaggi dei clienti dal sito.</span>
 </div>
 </div>
 </fieldset>
 
 <fieldset>
 <legend>Il tuo logo</legend>
-<div class="campo carica">
-<label for="logo">Logo</label>
-<input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" required>
-<span class="aiuto">Un file PNG o JPG. Va bene anche una foto del logo fatta con il telefono.</span>
+<div class="campo blocco-logo" id="blocco-logo">
+<input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" class="file-nascosto" aria-describedby="logo-nota logo-errore">
+<label for="logo" class="bottone-carica"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span id="logo-etichetta">Carica il logo</span></label>
+<span class="aiuto" id="logo-nota">PNG o JPG. Va bene anche una foto del logo fatta con il telefono.</span>
 <span class="scelti" id="logo-scelto" aria-live="polite"></span>
+<label class="logo-dopo" for="logo-dopo"><input id="logo-dopo" type="checkbox"><span><b>Il logo ve lo mando dopo</b>
+<span>Il sito va online lo stesso, con il nome della tua attività. Quando ci mandi il logo, rispondendo all'email di consegna, lo aggiungiamo noi.</span></span></label>
+<span class="errore-campo" id="logo-errore" hidden></span>
 </div>
 </fieldset>
 
@@ -264,20 +298,17 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </div>
 <div class="campo">
 <label for="google">La tua scheda su Google Maps</label>
-<input id="google" name="google" type="url" placeholder="Il link della tua attività su Google Maps" aria-describedby="google-nota">
+<input id="google" name="google" type="text" placeholder="Il link della tua attività su Google Maps" aria-describedby="google-nota" inputmode="url" autocapitalize="off">
 <span id="google-nota" class="aiuto">Se ce l'hai, la colleghiamo al sito: aiuta Google a capire che sito e scheda sono della stessa attività.</span>
 </div>
 </div>
 </details>
 
-<div class="conferma">
-<input id="diritti" name="diritti" type="checkbox" required>
-<label for="diritti">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
-</div>
-
 <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
 <div class="avanti">
 <button type="submit" class="invia">Continua: scegli il dominio</button>
+<p class="piccolo">Quello che scrivi resta salvato su questo telefono.</p>
+<p class="aiuto-contatto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Hai un dubbio? <a href="mailto:info@sitocomodo.it">Scrivici a info@sitocomodo.it</a></span></p>
 <a class="indietro" href="../ordina/">Cambia modello o carattere</a>
 </div>
 </form>
@@ -285,8 +316,8 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 
 <main class="scheda" id="passo3" hidden>
 <div>
-<h1 tabindex="-1" id="titolo-dominio">Scegli il dominio del tuo sito</h1>
-<p class="intro">Scrivi il nome della tua attività: ti mostriamo subito quelli liberi. Un dominio .it, .com o .eu è gratis per il primo anno ed è registrato a tuo nome.</p>
+<h1 tabindex="-1" id="titolo-dominio">Scegli l'indirizzo del tuo sito</h1>
+<p class="intro">È il dominio, come pizzeriadamario.it. Scrivi il nome della tua attività e ti mostriamo quelli liberi: il primo anno è gratis ed è registrato a tuo nome.</p>
 </div>
 <form id="cerca-form" class="cerca">
 <label for="cerca" class="solo-lettori">Nome della tua attività</label>
@@ -296,6 +327,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <div class="esiti">
 <p id="intestazione" class="intestazione">Esempio: per «Pizzeria da Mario» cerchiamo pizzeriadamario.it, .com ed .eu.</p>
 <ul id="risultati" class="risultati"></ul>
+<p class="piccolo" id="nota-liberi" hidden>Quelli liberi sono gratis il primo anno.</p>
 </div>
 
 <div class="riepilogo" id="riepilogo">
@@ -309,11 +341,18 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </dl>
 </div>
 
+<div class="conferma">
+<input id="diritti" type="checkbox" aria-describedby="diritti-errore">
+<label for="diritti">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
+</div>
+<span class="errore-campo" id="diritti-errore" hidden>Spunta la conferma per andare al pagamento.</span>
+
 <p class="errore-invio" id="errore-invio" role="alert" hidden></p>
 <div class="avanti">
 <button type="button" class="invia" id="vai" aria-disabled="true">Scegli prima un dominio</button>
 <p class="piccolo">Poi i dati di chi intesta il dominio e il pagamento: il sito è online in 30 minuti.* <a href="#" id="torna">Torna ai dati</a></p>
 <p class="piccolo nota-asterisco">* Su un indirizzo provvisorio. Sul tuo dominio appena il registro lo attiva: di solito da pochi minuti a qualche ora.</p>
+<p class="aiuto-contatto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Hai un dubbio? <a href="mailto:info@sitocomodo.it">Scrivici a info@sitocomodo.it</a></span></p>
 </div>
 </main>
 </div>
@@ -350,7 +389,58 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     scelte.textContent = n ? (n === 1 ? '1 foto scelta' : n + ' foto scelte') : '';
   });
   var logo = document.getElementById('logo'), logoScelto = document.getElementById('logo-scelto');
-  logo.addEventListener('change', function(){ logoScelto.textContent = logo.files.length ? 'Logo scelto: ' + logo.files[0].name : ''; });
+  var logoDopo = document.getElementById('logo-dopo'), bloccoLogo = document.getElementById('blocco-logo');
+  var logoErrore = document.getElementById('logo-errore'), logoEtichetta = document.getElementById('logo-etichetta');
+  function statoLogo(){
+    var c = logo.files.length > 0;
+    logoScelto.textContent = c ? 'Logo scelto: ' + logo.files[0].name : '';
+    logoEtichetta.textContent = c ? 'Cambia logo' : 'Carica il logo';
+    bloccoLogo.classList.toggle('con-file', c);
+    bloccoLogo.classList.toggle('dopo', !c && logoDopo.checked);
+    if (c && logoDopo.checked) logoDopo.checked = false;
+    if (c || logoDopo.checked) { logoErrore.hidden = true; bloccoLogo.removeAttribute('data-errore'); }
+  }
+  logo.addEventListener('change', statoLogo);
+  logoDopo.addEventListener('change', function(){
+    if (logoDopo.checked && logo.files.length) { try { logo.value = ''; } catch(e) {} }
+    statoLogo();
+  });
+  if (o.logo_dopo) logoDopo.checked = true;
+  statoLogo();
+
+  // ---- quello che scrivi resta salvato su questo telefono (i file no: il browser non lo permette)
+  var salva = null;
+  form.addEventListener('input', function(e){
+    if (TESTI.indexOf(e.target.id) < 0) return;
+    clearTimeout(salva);
+    salva = setTimeout(function(){ var d = leggi(); TESTI.forEach(function(k){ d[k] = document.getElementById(k).value.trim(); }); scrivi(d); }, 300);
+  });
+
+  // ---- errori scritti sotto il campo, al posto del fumetto del browser
+  var MESSAGGI = {
+    nome: {vuoto: 'Scrivi il nome della tua attività.'},
+    tipo: {vuoto: 'Scrivi che attività è, per esempio «parrucchiera».'},
+    telefono: {vuoto: 'Scrivi il numero di telefono.', sbagliato: 'Controlla il numero: servono almeno 6 cifre.'},
+    email: {vuoto: 'Scrivi la tua email.', sbagliato: 'Controlla l’email: manca qualcosa, per esempio la @.'}
+  };
+  function erroreDi(el){
+    var v = el.value.trim(), m = MESSAGGI[el.id];
+    if (!m) return '';
+    if (!v) return m.vuoto;
+    if (el.id === 'telefono' && v.replace(/[^0-9]/g, '').length < 6) return m.sbagliato;
+    if (el.id === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return m.sbagliato;
+    return '';
+  }
+  function mostraErrore(el, testo){
+    var s = document.getElementById(el.id + '-errore');
+    if (testo) { el.setAttribute('aria-invalid', 'true'); if (s) { s.textContent = testo; s.hidden = false; } }
+    else { el.removeAttribute('aria-invalid'); if (s) { s.textContent = ''; s.hidden = true; } }
+  }
+  Object.keys(MESSAGGI).forEach(function(k){
+    var el = document.getElementById(k);
+    el.addEventListener('input', function(){ if (el.getAttribute('aria-invalid') === 'true' && !erroreDi(el)) mostraErrore(el, ''); });
+    el.addEventListener('blur', function(){ if (el.getAttribute('aria-invalid') === 'true') mostraErrore(el, erroreDi(el)); });
+  });
 
   // ---- passaggi 2 e 3 nella stessa pagina: i file restano nel modulo
   var passi = document.getElementById('passi');
@@ -368,23 +458,34 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
       if (!input.value) { input.value = (document.getElementById('nome').value || '').trim(); if (input.value) cerca(input.value); }
     }
   }
-  function datiPronti(){ return logo.files.length > 0; }
+  function datiPronti(){ return logo.files.length > 0 || logoDopo.checked; }
   window.addEventListener('popstate', function(){ mostra(location.hash === '#dominio' && datiPronti() ? 3 : 2); });
   if (location.hash === '#dominio') history.replaceState(null, '', location.pathname + location.search);
   document.getElementById('torna').addEventListener('click', function(e){ e.preventDefault(); history.back(); });
 
-  form.addEventListener('input', function(e){ if (e.target.checkValidity && e.target.checkValidity()) e.target.removeAttribute('aria-invalid'); });
   form.addEventListener('submit', function(e){
     e.preventDefault();
     var primo = null;
-    Array.prototype.forEach.call(form.elements, function(el){
-      if (!el.willValidate) return;
-      if (el.checkValidity()) el.removeAttribute('aria-invalid'); else { el.setAttribute('aria-invalid', 'true'); if (!primo) primo = el; }
+    Object.keys(MESSAGGI).forEach(function(k){
+      var el = document.getElementById(k), t = erroreDi(el);
+      mostraErrore(el, t); if (t && !primo) primo = el;
     });
-    if (primo) { if (primo.closest('details')) primo.closest('details').open = true; primo.focus(); primo.reportValidity(); return; }
+    if (!datiPronti()) {
+      logoErrore.textContent = 'Carica il logo, oppure spunta «Il logo ve lo mando dopo».';
+      logoErrore.hidden = false; bloccoLogo.setAttribute('data-errore', '');
+      if (!primo) primo = logo;
+    }
+    var g = document.getElementById('google'), gv = g.value.trim();
+    if (gv && !/^https?:\/\//i.test(gv)) g.value = 'https://' + gv.replace(/^\/+/, '');
+    if (!primo && !foto.checkValidity()) { document.getElementById('altro').open = true; foto.focus(); foto.reportValidity(); return; }
+    if (primo) {
+      primo.focus({preventScroll: true});
+      (primo === logo ? bloccoLogo : primo.closest('.campo')).scrollIntoView({behavior: 'smooth', block: 'center'});
+      return;
+    }
     var d = leggi();
     TESTI.forEach(function(k){ d[k] = document.getElementById(k).value.trim(); });
-    d.foto = foto.files.length; d.quando = Date.now();
+    d.foto = foto.files.length; d.logo_dopo = !logo.files.length && logoDopo.checked; d.quando = Date.now();
     scrivi(d);
     history.pushState(null, '', '#dominio');
     mostra(3);
@@ -429,30 +530,32 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     if (sel) { vai.removeAttribute('aria-disabled'); vai.textContent = 'Vai al pagamento'; }
     else { vai.setAttribute('aria-disabled', 'true'); vai.textContent = 'Scegli prima un dominio'; }
   }
+  // 23/11/2026: righe compatte — nome e stato a sinistra, bottone a destra
+  var notaLiberi = document.getElementById('nota-liberi');
   function riga(dom, tag){
     var li = document.createElement('li'); li.className = 'riga attesa';
     var nome = document.createElement('div'); nome.className = 'nome';
-    var d = document.createElement('span'); d.className = 'dom'; d.textContent = dom; nome.append(d);
-    if (tag) { var t = document.createElement('span'); t.className = 'etichetta'; t.textContent = tag; nome.append(t); }
-    var stato = document.createElement('div'); stato.className = 'stato'; stato.textContent = 'Controllo…';
-    li.append(nome, stato); lista.append(li);
+    var d = document.createElement('span'); d.className = 'dom'; d.textContent = dom;
+    var sotto = document.createElement('span'); sotto.className = 'sotto';
+    var stato = document.createElement('span'); stato.textContent = 'Controllo…'; sotto.append(stato);
+    if (tag) { var t = document.createElement('span'); t.className = 'etichetta'; t.textContent = tag; sotto.append(t); }
+    nome.append(d, sotto); li.append(nome); lista.append(li);
     var r = {dom: dom, li: li, btn: null}; righe.push(r);
     return {r: r, stato: stato};
   }
   function cerca(testo){
     var b = base(testo), mio = ++giro;
-    lista.textContent = ''; righe = []; sel = ''; aggiorna();
+    lista.textContent = ''; righe = []; sel = ''; aggiorna(); notaLiberi.hidden = true;
     if (b.length < 3) { intest.textContent = 'Scrivi un nome di almeno 3 lettere o numeri.'; return; }
     intest.textContent = 'Risultati per «' + testo.trim() + '»';
     [[b + '.it', 'Consigliato'], [b + '.com', ''], [b + '.eu', ''], [b + '-online.it', 'Alternativa']].forEach(function(p){
       var x = riga(p[0], p[1]);
       libero(p[0]).catch(function(){ return null; }).then(function(ok){
         if (mio !== giro) return;
-        x.stato.textContent = '';
         if (ok === true) {
-          x.r.li.className = 'riga libero';
-          var s = document.createElement('span'); s.textContent = 'Libero, gratis il primo anno';
+          x.r.li.className = 'riga libero'; x.stato.textContent = 'Libero'; notaLiberi.hidden = false;
           var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Scegli'; btn.setAttribute('aria-pressed', 'false');
+          btn.setAttribute('aria-label', 'Scegli ' + p[0]);
           btn.addEventListener('click', function(){
             sel = p[0];
             var o2 = leggi(); o2.dominio = sel; scrivi(o2);
@@ -460,7 +563,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
             try { document.dispatchEvent(new CustomEvent('sc-dominio', {detail: sel})); } catch(e) {}
             if (window.matchMedia('(max-width: 1000px)').matches) riep.scrollIntoView({behavior: 'smooth', block: 'start'});
           });
-          x.r.btn = btn; x.stato.append(s, btn);
+          x.r.btn = btn; x.r.li.append(btn);
         } else if (ok === false) {
           x.r.li.className = 'riga preso'; x.stato.textContent = 'Già preso';
         } else {
@@ -480,8 +583,16 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   // ---- invio dell'ordine (testi, logo e foto) allo snippet di WordPress; poi si va al pagamento
   var INVIO = true, DESTINO = "/wp-admin/admin-post.php?action=sc_ordine", MAX = 9500000;
   var erroreInvio = document.getElementById('errore-invio');
+  var diritti = document.getElementById('diritti'), dirittiErrore = document.getElementById('diritti-errore');
+  diritti.addEventListener('change', function(){ if (diritti.checked) { dirittiErrore.hidden = true; diritti.removeAttribute('aria-invalid'); } });
   vai.addEventListener('click', function(){
     if (!sel) { input.focus(); return; }
+    if (!diritti.checked) {
+      dirittiErrore.hidden = false; diritti.setAttribute('aria-invalid', 'true');
+      diritti.focus({preventScroll: true}); diritti.closest('.conferma').scrollIntoView({behavior: 'smooth', block: 'center'});
+      return;
+    }
+    nascosto('diritti', '1');
     var d = leggi(); d.dominio = sel; scrivi(d);
     if (!INVIO) { location.href = '../checkout/'; return; }
     invia(d);
