@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ponte</title>
+<body>ponte
+<script>
+// Passa i video dei reel alla pagina di Meta Business Suite che apre questo frame.
+const BASE = 'https://raw.githubusercontent.com/KubeSRL/sitocomodo.it/d9fa6e3cecd2ee54aeee55164d33472e153f929d/';
+const NOMI = ['SitoComodo-rifai-due-dita.mp4', 'SitoComodo-rifai-orari.mp4', 'SitoComodo-rifai-benvenuti.mp4'];
+window.addEventListener('message', async (e) => {
+  if (e.origin !== 'https://business.facebook.com') return;
+  if (!e.data || e.data.tipo !== 'chiedi-reel' || !NOMI.includes(e.data.nome)) return;
+  try {
+    const r = await fetch(BASE + e.data.nome);
+    const blob = await r.blob();
+    parent.postMessage({tipo: 'reel-file', nome: e.data.nome, status: r.status, blob}, 'https://business.facebook.com');
+  } catch (err) {
+    parent.postMessage({tipo: 'reel-errore', nome: e.data.nome, msg: String(err)}, 'https://business.facebook.com');
+  }
+});
+parent.postMessage({tipo: 'ponte-pronto'}, 'https://business.facebook.com');
+</script>
