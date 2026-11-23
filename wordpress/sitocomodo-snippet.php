@@ -1483,7 +1483,7 @@ add_action('rest_api_init', function () {
             $dd = is_array($d['dns'] ?? null) ? $d['dns'] : [];
             $dns = ['ip' => (string) (filter_var($dd['ip'] ?? '', FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ?: ''),
                     'ipv6' => (string) (filter_var($dd['ipv6'] ?? '', FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ?: ''),
-                    'token' => mb_substr(preg_replace('/[^A-Za-z0-9._-]/', '', (string) ($dd['token'] ?? '')), 0, 100)];
+                    'token' => mb_substr(preg_replace('#[^A-Za-z0-9._/+=-]#', '', (string) ($dd['token'] ?? '')), 0, 100)]; // il token OVH è in base64: / + = vanno tenuti
             $s['dns'] = ($dns['ip'] && $dns['token']) ? $dns : ($prima['dns'] ?? []);
             $s['email_guida'] = $prima['email_guida'] ?? '';
             $s['promemoria'] = $prima['promemoria'] ?? '';
@@ -1498,7 +1498,7 @@ add_action('rest_api_init', function () {
                 $n = $s['tentativi'];
                 $guida_ok = !empty($s['dns']['ip']) && !empty($s['dns']['token']);
                 $email_on = get_option('sc_email_cliente', '') === '1';
-                if ($s['email_guida'] === '') {
+                if ($s['email_guida'] === '' || ($s['email_guida'] === 'mancano i dati' && $guida_ok)) {
                     if (!$guida_ok) {
                         $righe[] = ''; $righe[] = 'ATTENZIONE: mancano l\'indirizzo IP o il token ovhcontrol: la guida al cliente NON è partita.';
                         $s['email_guida'] = 'mancano i dati';
