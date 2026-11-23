@@ -1172,7 +1172,7 @@ function sc_pagina_live() {
     $('sc-fonti').textContent = chiavi.length ? 'Da dove arrivano oggi: ' + chiavi.map(function(k){ return k + ' ' + f[k]; }).join(' · ') : '';
     var an = d.oggi.an || {totale: 0, vecchie: 0}, nuove = an.totale - an.vecchie;
     $('sc-an').textContent = !an.totale ? '' : 'Audience Network, tenuto a parte: ' + an.totale + (an.totale === 1 ? ' apertura' : ' aperture') + ' oggi. '
-      + (an.vecchie ? an.vecchie + ' sono di prima della separazione e restano anche nei passi qui sopra' + (nuove ? '; le altre ' + nuove + ' no.' : '.') : 'Non sono nei numeri qui sopra.');
+      + (!an.vecchie ? 'Non sono nei numeri qui sopra.' : !nuove ? 'Sono tutte di prima della separazione e restano anche nei passi qui sopra.' : an.vecchie + ' sono di prima della separazione e restano anche nei passi qui sopra; le altre ' + nuove + ' no.');
     $('sc-carrelli').innerHTML = d.carrelli.length ? '<div class="tab"><table><thead><tr><th>Quando</th><th>Attività</th><th>Dominio</th><th>Contatti</th></tr></thead><tbody>' + d.carrelli.map(function(c){
       var tel = c.telefono || c.whatsapp, cont = [];
       if (tel) cont.push('<a href="tel:' + esc(tel.replace(/[^0-9+]/g, '')) + '">' + esc(tel) + '</a>');
