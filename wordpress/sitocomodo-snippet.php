@@ -32,6 +32,9 @@ add_action('template_redirect', function () {
     if (preg_match('#^/(wp-admin|wp-json|wp-content|wp-includes|wp-login)#', $percorso) || strpos($percorso, '..') !== false) {
         return;
     }
+    if (preg_match('#^/anteprima/([a-f0-9]{16,40})(/.*)?$#', $percorso, $m)) {   // 24/11/2026: anteprima gratis
+        sc_anteprima_servi($m[1], $m[2] ?? '/');
+    }
     if ($percorso === '/' . SC_INDEXNOW_KEY . '.txt') {
         status_header(200);
         header('Content-Type: text/plain; charset=utf-8');
@@ -145,7 +148,7 @@ add_action('admin_post_sc_ordine', 'sc_ricevi_ordine');
 
 function sc_campi_ordine() {
     return [
-        'nome' => "Nome dell'attività", 'tipo' => 'Che attività è', 'chi' => 'Chi siete', 'servizi' => 'Cosa offre',
+        'nome' => "Nome dell'attività", 'tipo' => 'Che attività è', 'citta' => 'Città', 'chi' => 'Chi siete', 'servizi' => 'Cosa offre',
         'telefono' => 'Telefono', 'whatsapp' => 'WhatsApp', 'email' => 'Email per i contatti', 'indirizzo' => 'Indirizzo',
         'orari' => 'Orari', 'colori' => 'Colori preferiti', 'social' => 'Link social', 'google' => 'Scheda Google Maps',
         'modello_scelto' => 'Modello', 'carattere_scelto' => 'Carattere dei titoli',
@@ -190,6 +193,7 @@ function sc_file_caricati($nome) {
 }
 
 function sc_ricevi_ordine() {
+    if (!empty($_POST['anteprima'])) sc_ricevi_anteprima();   // 24/11/2026: anteprima gratis prima di pagare (esce da sola)
     $pagamento = home_url('/checkout/');
     if (!empty($_POST['_honey'])) {           // trappola per i robot
         wp_safe_redirect($pagamento, 303);
@@ -1054,14 +1058,14 @@ function sc_live_script() {
 
 function sc_live_passi() {
     return ['home' => 'Home', 'esempi' => 'Guarda gli esempi', 'rifai' => 'Pagina «Rifai il tuo sito»', 'dominio' => 'Sceglie il modello', 'modulo' => 'Apre il modulo',
-            'dati' => 'Ha compilato i dati', 'liberi' => 'Vede i domini liberi', 'scelto' => 'Ha scelto il dominio',
+            'dati' => 'Ha compilato i dati', 'anteprima' => 'Chiede l\'anteprima gratis', 'liberi' => 'Vede i domini liberi', 'scelto' => 'Ha scelto il dominio',
             'paga' => 'Clicca «Vai al pagamento»',
             'pagamento' => 'Pagina di pagamento', 'pagato' => 'Ha pagato (pagina grazie)', 'altro' => 'Altre pagine'];
 }
 
 // passaggi dentro la pagina /ordine/ (passo 2 e 3), mandati dalla pagina con window.scTappa
 function sc_live_tappe() {
-    return ['dati', 'liberi', 'scelto', 'paga'];
+    return ['dati', 'anteprima', 'liberi', 'scelto', 'paga'];
 }
 
 function sc_live_passo($percorso) {
@@ -1388,9 +1392,10 @@ function sc_fabbrica_dati($o) {
     }
     $i = $o['intestatario'] ?? [];
     $d = ['sessione' => $o['pagamento']['sessione'] ?? '', 'prova' => false, 'dominio' => $o['dominio'] ?? ''];
-    foreach (['nome', 'tipo', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'] as $k) {
+    foreach (['nome', 'tipo', 'citta', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'] as $k) {
         $d[$k] = (string) ($o[$k] ?? '');
     }
+    $d['anteprima'] = (string) ($o['anteprima'] ?? '');   // ordine nato da un'anteprima: la fabbrica rimette online lo stesso sito
     $d['modello'] = (string) ($o['modello'] ?? 'nostro');
     $d['carattere'] = (string) ($o['carattere'] ?? 'nostro');
     $d['piva'] = (string) ($i['piva'] ?? '');
@@ -1660,3 +1665,629 @@ add_action('rest_api_init', function () {
         },
     ]);
 });
+
+// ---------------------------------------------------------------- 6. anteprima gratis (24/11/2026, scelta di Giuseppe)
+// Il cliente vede il suo sito PRIMA di pagare. Il modulo (passi 1 e 2) arriva su sc_ricevi_ordine con anteprima=1:
+// si salvano testi e foto, parte la fabbrica (evento «anteprima», al massimo SC_ANTEPRIME_GIORNO al giorno) e il cliente
+// aspetta su /anteprima/<codice>/. La fabbrica rimanda il sito (zip) a /wp-json/sitocomodo/v1/anteprima-sito; da lì resta
+// visibile SC_ANTEPRIMA_MINUTI minuti (ogni versione nuova riparte da capo). Fino a SC_ANTEPRIMA_GIRI modifiche automatiche.
+// «Lo voglio» → /ordine/?anteprima=<codice>#dominio → dominio → cassa → Stripe: l'ordine pagato porta il codice e la
+// fabbrica rimette online lo stesso sito che il cliente ha visto, sul dominio vero (senza ricostruirlo).
+
+if (!defined('SC_ANTEPRIME_GIORNO')) define('SC_ANTEPRIME_GIORNO', 20);
+if (!defined('SC_ANTEPRIMA_MINUTI')) define('SC_ANTEPRIMA_MINUTI', 40);
+if (!defined('SC_ANTEPRIMA_GIRI')) define('SC_ANTEPRIMA_GIRI', 2);
+if (!defined('SC_ANTEPRIME_STESSO_IP')) define('SC_ANTEPRIME_STESSO_IP', 3);
+
+function sc_anteprime_leggi() {
+    $a = get_option('sc_anteprime', []);
+    return is_array($a) ? $a : [];
+}
+
+function sc_anteprime_scrivi($a) {
+    $limite = time() - 30 * DAY_IN_SECONDS;   // 30 giorni: sono anche contatti da richiamare
+    $a = array_filter($a, function ($x) use ($limite) { return (int) ($x['creata'] ?? 0) >= $limite; });
+    update_option('sc_anteprime', $a, false);
+}
+
+function sc_anteprima_codice_ok($c) {
+    return is_string($c) && (bool) preg_match('/^[a-f0-9]{16,40}$/', $c);
+}
+
+function sc_anteprima_cartella($codice) {
+    $up = wp_upload_dir();
+    return trailingslashit($up['basedir']) . 'sitocomodo-anteprime/' . $codice;
+}
+
+function sc_anteprima_url($codice) {
+    return home_url('/anteprima/' . $codice . '/');
+}
+
+function sc_rimuovi_cartella($dir) {
+    if (!is_dir($dir) || is_link($dir)) return;
+    foreach (scandir($dir) as $x) {
+        if ($x === '.' || $x === '..') continue;
+        $p = $dir . '/' . $x;
+        if (is_dir($p) && !is_link($p)) sc_rimuovi_cartella($p); else @unlink($p);
+    }
+    @rmdir($dir);
+}
+
+// salva logo e foto del modulo in una cartella con nome casuale (come gli ordini): [cartella, salvati, problemi]
+function sc_salva_file_ordine($etichetta) {
+    $up = wp_upload_dir();
+    $base = trailingslashit($up['basedir']) . 'ordini-sitocomodo';
+    wp_mkdir_p($base);
+    if (!file_exists($base . '/index.html')) @file_put_contents($base . '/index.html', '');
+    $cartella = wp_date('Ymd-His') . '-' . preg_replace('/[^a-z0-9.\-]/', '', strtolower($etichetta)) . '-' . bin2hex(random_bytes(10));
+    $dir = $base . '/' . $cartella;
+    wp_mkdir_p($dir);
+    @file_put_contents($dir . '/index.html', '');
+    $tipi = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/heic' => 'heic', 'image/heif' => 'heif'];
+    $salvati = [];
+    $problemi = [];
+    foreach (['logo' => 'logo', 'foto' => 'foto', 'foto_telefono' => 'foto-telefono'] as $campo => $prefisso) {
+        $n = 0;
+        foreach (sc_file_caricati($campo) as $f) {
+            if ($f['error'] === UPLOAD_ERR_NO_FILE) continue;
+            if ($f['error'] !== UPLOAD_ERR_OK) { $problemi[] = "$campo: errore di caricamento {$f['error']}"; continue; }
+            if ($f['size'] > 15 * 1024 * 1024) { $problemi[] = "$campo: file troppo grande ({$f['name']})"; continue; }
+            if ($campo === 'foto' && $n >= 6) { $problemi[] = 'foto oltre la sesta ignorate'; break; }
+            $mime = function_exists('mime_content_type') ? (string) mime_content_type($f['tmp_name']) : '';
+            if (!isset($tipi[$mime])) { $problemi[] = "$campo: tipo non accettato $mime ({$f['name']})"; continue; }
+            $n++;
+            $nome = $prefisso . ($campo === 'foto' ? '-' . $n : '') . '.' . $tipi[$mime];
+            if (@move_uploaded_file($f['tmp_name'], $dir . '/' . $nome)) {
+                $salvati[] = ['campo' => $campo, 'file' => $nome, 'kb' => (int) round($f['size'] / 1024)];
+            } else {
+                $problemi[] = "$campo: impossibile salvare {$f['name']}";
+            }
+        }
+    }
+    return [$cartella, $salvati, $problemi];
+}
+
+function sc_ricevi_anteprima() {
+    if (!empty($_POST['_honey'])) { wp_safe_redirect(home_url('/'), 303); exit; }   // trappola per i robot
+    $d = [];
+    foreach (sc_campi_ordine() as $k => $etichetta) $d[$k] = sc_campo($k);
+    $d['modello'] = sc_campo('modello', 40);
+    $d['carattere'] = sc_campo('carattere', 40);
+    $d['diritti'] = isset($_POST['diritti']) ? 'sì' : 'no';
+    if ($d['nome'] === '' || $d['tipo'] === '' || !is_email($d['email'] ?? '')) {
+        wp_safe_redirect(home_url('/ordine/'), 303);
+        exit;
+    }
+    $codice = bin2hex(random_bytes(10));
+    [$d['cartella'], $d['file'], $d['problemi']] = sc_salva_file_ordine('anteprima-' . substr($codice, 0, 6));
+    $ip = hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? '') . wp_salt('auth'));
+    $oggi = wp_date('Y-m-d');
+    $tutte = sc_anteprime_leggi();
+    $stesso_ip = 0;
+    foreach ($tutte as $x) {
+        if (($x['ip'] ?? '') === $ip && wp_date('Y-m-d', (int) ($x['creata'] ?? 0)) === $oggi) $stesso_ip++;
+    }
+    $tutte[$codice] = ['codice' => $codice, 'creata' => time(), 'ip' => $ip, 'stato' => 'in preparazione', 'versione' => 0,
+                       'giri' => 0, 'modifiche' => [], 'dati' => $d];
+    if ($stesso_ip >= SC_ANTEPRIME_STESSO_IP) $tutte[$codice]['stato'] = 'rifiutata';
+    sc_anteprime_scrivi($tutte);
+    if ($tutte[$codice]['stato'] !== 'rifiutata') sc_anteprima_avvia($codice);
+    wp_safe_redirect(sc_anteprima_url($codice) . '?nuova=1', 303);
+    exit;
+}
+
+function sc_anteprime_avviate_oggi() {
+    $oggi = wp_date('Y-m-d');
+    $n = 0;
+    foreach (sc_anteprime_leggi() as $x) {
+        if (!empty($x['avviata']) && wp_date('Y-m-d', (int) $x['avviata']) === $oggi) $n++;
+    }
+    return $n;
+}
+
+function sc_anteprima_payload($a, $richiesta = '') {
+    $d = $a['dati'] ?? [];
+    $p = ['anteprima' => $a['codice'], 'sessione' => '', 'prova' => false, 'dominio' => '', 'offerta' => 'nuovo'];
+    foreach (['nome', 'tipo', 'citta', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'] as $k) {
+        $p[$k] = (string) ($d[$k] ?? '');
+    }
+    $p['modello'] = (string) (($d['modello'] ?? '') ?: 'nostro');
+    $p['carattere'] = (string) (($d['carattere'] ?? '') ?: 'nostro');
+    foreach (['piva', 'ragione', 'citta_intestatario', 'provincia_intestatario', 'dominio_acquisto', 'hosting_attuale', 'fatto_con', 'dns_rilevati'] as $k) {
+        $p[$k] = '';
+    }
+    $p['file'] = [];
+    if ($richiesta === '') {
+        foreach (($d['file'] ?? []) as $f) {
+            $p['file'][] = ['campo' => $f['campo'] ?? '', 'file' => $f['file'], 'url' => sc_url_foto($d['cartella'] ?? '', $f['file'])];
+        }
+    } else {
+        $p['richiesta'] = $richiesta;
+    }
+    return $p;
+}
+
+// parte la costruzione (o la mette in coda per domani mattina se oggi si è arrivati al limite)
+function sc_anteprima_avvia($codice) {
+    $tutte = sc_anteprime_leggi();
+    if (empty($tutte[$codice])) return;
+    $a = $tutte[$codice];
+    if (get_option('sc_fabbrica_attiva', '') !== '1' || sc_anteprime_avviate_oggi() >= SC_ANTEPRIME_GIORNO) {
+        $tutte[$codice]['stato'] = 'in coda';
+        sc_anteprime_scrivi($tutte);
+        if (!wp_next_scheduled('sc_anteprime_coda')) {
+            $domani = (new DateTime('tomorrow 08:00', wp_timezone()))->getTimestamp();
+            wp_schedule_single_event($domani, 'sc_anteprime_coda');
+        }
+        return;
+    }
+    $esito = sc_fabbrica_dispatch('anteprima', sc_anteprima_payload($a));
+    $tutte = sc_anteprime_leggi();
+    if (is_wp_error($esito)) {
+        $tutte[$codice]['stato'] = 'non riuscita';
+        $tutte[$codice]['note'] = $esito->get_error_message();
+        sc_anteprime_scrivi($tutte);
+        sc_anteprima_avvisa_giuseppe($tutte[$codice], 'ATTENZIONE: anteprima NON partita', ['La costruzione non è partita: ' . $esito->get_error_message()]);
+        return;
+    }
+    $tutte[$codice]['stato'] = 'in preparazione';
+    $tutte[$codice]['avviata'] = time();
+    sc_anteprime_scrivi($tutte);
+}
+
+add_action('sc_anteprime_coda', function () {
+    $tutte = sc_anteprime_leggi();
+    uasort($tutte, function ($x, $y) { return ($x['creata'] ?? 0) <=> ($y['creata'] ?? 0); });
+    foreach ($tutte as $c => $x) {
+        if (($x['stato'] ?? '') !== 'in coda') continue;
+        if (sc_anteprime_avviate_oggi() >= SC_ANTEPRIME_GIORNO) break;
+        sc_anteprima_avvia($c);
+    }
+    foreach (sc_anteprime_leggi() as $x) {   // ne restano: domani si continua
+        if (($x['stato'] ?? '') === 'in coda' && !wp_next_scheduled('sc_anteprime_coda')) {
+            wp_schedule_single_event((new DateTime('tomorrow 08:00', wp_timezone()))->getTimestamp(), 'sc_anteprime_coda');
+            break;
+        }
+    }
+});
+
+function sc_anteprima_avvisa_giuseppe($a, $oggetto, $righe_extra = []) {
+    $d = $a['dati'] ?? [];
+    $righe = array_merge($righe_extra, ['',
+        'Attività: ' . ($d['nome'] ?? '') . ' (' . ($d['tipo'] ?? '') . ')' . (($d['citta'] ?? '') !== '' ? ' · ' . $d['citta'] : ''),
+        'Telefono: ' . ($d['telefono'] ?? '') . ' · Email: ' . ($d['email'] ?? ''),
+        'Anteprima: ' . sc_anteprima_url($a['codice']),
+        'Stato: ' . ($a['stato'] ?? '') . ' · modifiche usate: ' . (int) ($a['giri'] ?? 0) . ' di ' . SC_ANTEPRIMA_GIRI]);
+    $h = ['Content-Type: text/plain; charset=UTF-8'];
+    if (is_email($d['email'] ?? '')) $h[] = 'Reply-To: ' . $d['email'];
+    wp_mail(SC_DESTINATARIO, $oggetto . ' — ' . ($d['nome'] ?? ''), implode("\n", $righe), $h);
+}
+
+function sc_anteprima_email_cliente($a, $modifica) {
+    if (get_option('sc_email_cliente', '') !== '1') return 'email ai clienti spente';
+    $d = $a['dati'] ?? [];
+    if (!is_email($d['email'] ?? '')) return 'email non valida';
+    $nome = (string) ($d['nome'] ?? 'la tua attività');
+    $link = sc_anteprima_url($a['codice']);
+    $righe = $modifica
+        ? ['Buongiorno,', '', 'abbiamo fatto la modifica che hai chiesto. La nuova anteprima del sito di ' . $nome . ' è qui:', $link, '',
+           'Resta visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.']
+        : ['Buongiorno,', '', 'l\'anteprima del sito di ' . $nome . ' è pronta:', $link, '',
+           'Resta visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Se vuoi cambiare qualcosa, dalla pagina puoi chiedere fino a ' . SC_ANTEPRIMA_GIRI . ' modifiche.',
+           'Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.'];
+    $righe = array_merge($righe, ['', 'Per qualsiasi dubbio puoi rispondere a questa email.', '', 'Il team di SitoComodo', SC_DESTINATARIO]);
+    $oggetto = $modifica ? 'Modifica fatta: guarda il sito di ' . $nome : 'Il sito di ' . $nome . ' è pronto da vedere';
+    return wp_mail($d['email'], $oggetto, implode("\n", $righe), ['Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . SC_DESTINATARIO]) ? 'sì' : 'non partita';
+}
+
+// se la fabbrica non risponde entro 30 minuti, il cliente non deve aspettare all'infinito: «ti scriviamo noi» e avviso a Giuseppe
+function sc_anteprima_controlla_ritardo($codice) {
+    $tutte = sc_anteprime_leggi();
+    $a = $tutte[$codice] ?? null;
+    if (!$a || !in_array($a['stato'] ?? '', ['in preparazione', 'in modifica'], true)) return;
+    $da = ($a['stato'] === 'in modifica') ? (int) ((end($a['modifiche']) ?: [])['quando'] ?? 0) : (int) ($a['avviata'] ?? $a['creata'] ?? 0);
+    if ($da === 0 || time() - $da < 30 * MINUTE_IN_SECONDS) return;
+    if ($a['stato'] === 'in modifica' && (int) $a['versione'] > 0) {
+        $tutte[$codice]['stato'] = 'pronta';
+        $tutte[$codice]['scade'] = time() + SC_ANTEPRIMA_MINUTI * MINUTE_IN_SECONDS;
+        $k = count($tutte[$codice]['modifiche']) - 1;
+        if ($k >= 0) $tutte[$codice]['modifiche'][$k]['non_fatto'] = 'La modifica ci sta mettendo più del previsto: ti scriviamo noi.';
+    } else {
+        $tutte[$codice]['stato'] = 'non riuscita';
+    }
+    $tutte[$codice]['note'] = 'la fabbrica non ha risposto entro 30 minuti';
+    sc_anteprime_scrivi($tutte);
+    sc_anteprima_avvisa_giuseppe($tutte[$codice], 'ATTENZIONE: anteprima ferma da 30 minuti', ['La fabbrica non ha risposto: guarda i lavori su GitHub (Actions) e contatta il cliente.']);
+}
+
+add_action('rest_api_init', function () {
+    // stato dell'anteprima, per la pagina che aspetta e per la barra (chi ha il codice è il cliente)
+    register_rest_route('sitocomodo/v1', '/anteprima-stato', [
+        'methods' => 'GET',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            $c = (string) $r->get_param('codice');
+            if (sc_anteprima_codice_ok($c)) sc_anteprima_controlla_ritardo($c);
+            $a = sc_anteprima_codice_ok($c) ? (sc_anteprime_leggi()[$c] ?? null) : null;
+            if (!$a) return new WP_REST_Response(['ok' => false], 404);
+            $ultima = end($a['modifiche']) ?: [];
+            return ['ok' => true, 'stato' => $a['stato'], 'versione' => (int) $a['versione'], 'scade' => (int) ($a['scade'] ?? 0), 'ora' => time(),
+                    'giri_rimasti' => max(0, SC_ANTEPRIMA_GIRI - (int) $a['giri']),
+                    'fatto' => $ultima['fatto'] ?? '', 'non_fatto' => $ultima['non_fatto'] ?? ''];
+        },
+    ]);
+
+    // la fabbrica manda il sito pronto (zip) o l'errore: solo con il segreto condiviso
+    register_rest_route('sitocomodo/v1', '/anteprima-sito', [
+        'methods' => 'POST',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            $segreto = (string) get_option('sc_fabbrica_segreto', '');
+            if ($segreto === '' || !hash_equals($segreto, (string) $r->get_header('x_sc_segreto'))) {
+                return new WP_REST_Response(['errore' => 'non autorizzato'], 401);
+            }
+            $c = (string) $r->get_param('codice');
+            $tutte = sc_anteprime_leggi();
+            if (!sc_anteprima_codice_ok($c) || empty($tutte[$c])) return new WP_REST_Response(['errore' => 'anteprima sconosciuta'], 404);
+            $modifica = (string) $r->get_param('modifica') === '1';
+            $testo = function ($k) use ($r) { return mb_substr(sanitize_textarea_field((string) $r->get_param($k)), 0, 1500, 'UTF-8'); };
+            if ((string) $r->get_param('ok') !== '1') {
+                $tutte[$c]['note'] = $testo('motivo') . ' ' . $testo('note');
+                if ($modifica && (int) $tutte[$c]['versione'] > 0) {   // la versione di prima resta visibile
+                    $tutte[$c]['stato'] = 'pronta';
+                    $tutte[$c]['scade'] = max((int) ($tutte[$c]['scade'] ?? 0), time() + SC_ANTEPRIMA_MINUTI * MINUTE_IN_SECONDS);
+                    $k = count($tutte[$c]['modifiche']) - 1;
+                    if ($k >= 0) $tutte[$c]['modifiche'][$k]['non_fatto'] = 'Non siamo riusciti a fare questa modifica in automatico: ti scriviamo noi.';
+                } else {
+                    $tutte[$c]['stato'] = 'non riuscita';
+                }
+                sc_anteprime_scrivi($tutte);
+                sc_anteprima_avvisa_giuseppe($tutte[$c], $modifica ? 'ATTENZIONE: modifica dell\'anteprima NON riuscita' : 'ATTENZIONE: anteprima NON riuscita',
+                    ['Motivo: ' . $testo('motivo'), 'Note: ' . $testo('note'), 'Lavoro su GitHub: ' . esc_url_raw((string) $r->get_param('run')),
+                     'Il cliente vede: ' . ($modifica ? 'la versione di prima e «ti scriviamo noi»' : '«non siamo riusciti, ti scriviamo noi»') . '. Contattalo.']);
+                return ['ok' => true, 'registrato' => 'errore'];
+            }
+            if (!class_exists('ZipArchive')) return new WP_REST_Response(['errore' => 'ZipArchive non disponibile su questo hosting'], 500);
+            $f = $r->get_file_params()['sito'] ?? null;
+            if (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || ($f['size'] ?? 0) > 40 * 1024 * 1024) {
+                return new WP_REST_Response(['errore' => 'zip del sito mancante o troppo grande'], 400);
+            }
+            $ammesse = ['html', 'css', 'js', 'json', 'xml', 'txt', 'svg', 'png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'ico', 'woff2', 'woff', 'webmanifest'];
+            $z = new ZipArchive();
+            if ($z->open($f['tmp_name']) !== true) return new WP_REST_Response(['errore' => 'zip non leggibile'], 400);
+            $dir = sc_anteprima_cartella($c);
+            $nuova = $dir . '-nuova-' . bin2hex(random_bytes(4));
+            wp_mkdir_p($nuova);
+            $scritti = 0;
+            for ($i = 0; $i < $z->numFiles && $i < 600; $i++) {
+                $nome = (string) $z->getNameIndex($i);
+                if (substr($nome, -1) === '/') continue;
+                $est = strtolower(pathinfo($nome, PATHINFO_EXTENSION));
+                if ($nome === '' || $nome[0] === '/' || strpos($nome, '..') !== false || strpos($nome, '\\') !== false
+                    || !preg_match('#^[A-Za-z0-9._/\-]+$#', $nome) || !in_array($est, $ammesse, true)) continue;
+                $dest = $nuova . '/' . $nome;
+                wp_mkdir_p(dirname($dest));
+                $dati = $z->getFromIndex($i);
+                if ($dati !== false && @file_put_contents($dest, $dati) !== false) $scritti++;
+            }
+            $z->close();
+            if ($scritti === 0 || !is_file($nuova . '/index.html')) {
+                sc_rimuovi_cartella($nuova);
+                return new WP_REST_Response(['errore' => 'nello zip manca il sito'], 400);
+            }
+            $vecchia = $dir . '-vecchia-' . bin2hex(random_bytes(4));
+            if (is_dir($dir)) @rename($dir, $vecchia);
+            @rename($nuova, $dir);
+            sc_rimuovi_cartella($vecchia);
+            $tutte = sc_anteprime_leggi();
+            $tutte[$c]['stato'] = 'pronta';
+            $tutte[$c]['versione'] = (int) $tutte[$c]['versione'] + 1;
+            $tutte[$c]['pronta'] = time();
+            $tutte[$c]['scade'] = time() + SC_ANTEPRIMA_MINUTI * MINUTE_IN_SECONDS;
+            if ($modifica) {
+                $k = count($tutte[$c]['modifiche']) - 1;
+                if ($k >= 0) {
+                    $tutte[$c]['modifiche'][$k]['fatto'] = $testo('fatto');
+                    $tutte[$c]['modifiche'][$k]['non_fatto'] = $testo('non_fatto');
+                }
+            }
+            $tutte[$c]['email_cliente'] = sc_anteprima_email_cliente($tutte[$c], $modifica);
+            sc_anteprime_scrivi($tutte);
+            sc_anteprima_avvisa_giuseppe($tutte[$c], $modifica ? 'Modifica fatta all\'anteprima' : 'Nuova anteprima pronta (cliente da seguire)',
+                array_filter([$modifica ? 'Fatto: ' . $testo('fatto') : '', $modifica && $testo('non_fatto') !== '' ? 'Non fatto: ' . $testo('non_fatto') : '',
+                              $testo('note') !== '' ? 'Note della fabbrica: ' . $testo('note') : '',
+                              'Email al cliente: ' . $tutte[$c]['email_cliente']]));
+            return ['ok' => true, 'file' => $scritti];
+        },
+    ]);
+
+    // il cliente chiede una modifica (fino a SC_ANTEPRIMA_GIRI)
+    register_rest_route('sitocomodo/v1', '/anteprima-modifica', [
+        'methods' => 'POST',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            $d = $r->get_json_params();
+            $c = (string) ($d['codice'] ?? '');
+            $tutte = sc_anteprime_leggi();
+            if (!sc_anteprima_codice_ok($c) || empty($tutte[$c])) return new WP_REST_Response(['ok' => false, 'errore' => 'Anteprima non trovata.'], 404);
+            $testo = trim(mb_substr(sanitize_textarea_field((string) ($d['testo'] ?? '')), 0, 1500, 'UTF-8'));
+            if (mb_strlen($testo) < 4) return new WP_REST_Response(['ok' => false, 'errore' => 'Scrivi cosa vuoi cambiare.'], 400);
+            if (($tutte[$c]['stato'] ?? '') !== 'pronta') return new WP_REST_Response(['ok' => false, 'errore' => 'Stiamo ancora lavorando all\'anteprima: aspetta che sia pronta.'], 409);
+            if ((int) $tutte[$c]['giri'] >= SC_ANTEPRIMA_GIRI) {
+                return new WP_REST_Response(['ok' => false, 'errore' => 'Hai già usato le ' . SC_ANTEPRIMA_GIRI . ' modifiche gratis. Dopo il pagamento le piccole modifiche restano gratis per 14 giorni.'], 409);
+            }
+            $tutte[$c]['giri'] = (int) $tutte[$c]['giri'] + 1;
+            $tutte[$c]['stato'] = 'in modifica';
+            $tutte[$c]['modifiche'][] = ['quando' => time(), 'testo' => $testo];
+            sc_anteprime_scrivi($tutte);
+            $esito = sc_fabbrica_dispatch('anteprima-modifica', sc_anteprima_payload($tutte[$c], $testo));
+            $tutte = sc_anteprime_leggi();
+            if (is_wp_error($esito)) {
+                $tutte[$c]['giri'] = (int) $tutte[$c]['giri'] - 1;
+                $tutte[$c]['stato'] = 'pronta';
+                array_pop($tutte[$c]['modifiche']);
+                sc_anteprime_scrivi($tutte);
+                return new WP_REST_Response(['ok' => false, 'errore' => 'Non riusciamo a partire con la modifica. Riprova tra un attimo.'], 503);
+            }
+            sc_anteprima_avvisa_giuseppe($tutte[$c], 'Modifica chiesta sull\'anteprima', ['Il cliente chiede: ' . $testo, 'La fa la fabbrica in automatico.']);
+            return ['ok' => true, 'giri_rimasti' => max(0, SC_ANTEPRIMA_GIRI - (int) $tutte[$c]['giri'])];
+        },
+    ]);
+
+    // «Lo voglio»: il cliente sceglie il dominio; l'anteprima diventa un ordine in attesa di pagamento
+    register_rest_route('sitocomodo/v1', '/anteprima-dominio', [
+        'methods' => 'POST',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            $d = $r->get_json_params();
+            $c = (string) ($d['codice'] ?? '');
+            $tutte = sc_anteprime_leggi();
+            if (!sc_anteprima_codice_ok($c) || empty($tutte[$c])) return new WP_REST_Response(['ok' => false, 'errore' => 'Anteprima non trovata.'], 404);
+            $a = $tutte[$c];
+            if ((int) ($a['versione'] ?? 0) < 1) return new WP_REST_Response(['ok' => false, 'errore' => 'L\'anteprima non è ancora pronta.'], 409);
+            $dominio = strtolower(preg_replace('/[^a-zA-Z0-9.\-]/', '', (string) ($d['dominio'] ?? '')));
+            if (!preg_match('/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.(it|com|eu|net|org|info|online|shop|store|studio|me)$/', $dominio)) {
+                return new WP_REST_Response(['ok' => false, 'errore' => 'Dominio non valido.'], 400);
+            }
+            $o = $a['dati'];
+            $o['dominio'] = $dominio;
+            $o['offerta'] = 'nuovo';
+            $o['anteprima'] = $c;
+            $o['riferimento_stripe'] = str_replace('.', '_', $dominio);
+            $o['ricevuto'] = wp_date('d/m/Y H:i:s');
+            $o['stato'] = 'in attesa di pagamento';
+            $o['dns_rilevati'] = '';
+            $ordini = sc_ordini_leggi();
+            $trovato = false;
+            foreach ($ordini as $k => $x) {   // ha cambiato dominio prima di pagare: aggiorna lo stesso ordine
+                if (($x['anteprima'] ?? '') === $c && ($x['stato'] ?? '') === 'in attesa di pagamento') { $ordini[$k] = $o; $trovato = true; }
+            }
+            if (!$trovato) $ordini[] = $o;
+            sc_ordini_scrivi($ordini);
+            $tutte[$c]['dominio_scelto'] = $dominio;
+            $tutte[$c]['vuole_pagare'] = time();
+            sc_anteprime_scrivi($tutte);
+            return ['ok' => true, 'nome' => $o['nome'] ?? '', 'tipo' => $o['tipo'] ?? '', 'email' => $o['email'] ?? '', 'telefono' => $o['telefono'] ?? '',
+                    'modello' => $o['modello'] ?? '', 'carattere' => $o['carattere'] ?? '', 'modello_nome' => $o['modello_scelto'] ?? '',
+                    'carattere_nome' => $o['carattere_scelto'] ?? ''];
+        },
+    ]);
+});
+
+// ---- pagine dell'anteprima: /anteprima/<codice>/...
+function sc_anteprima_pagina($titolo, $corpo, $codice = '', $aspetta = false) {
+    $script = '';
+    if ($aspetta && $codice !== '') {
+        $script = '<script>(function(){var c=' . wp_json_encode($codice) . ',v=-1;function g(){fetch("/wp-json/sitocomodo/v1/anteprima-stato?codice="+c,{cache:"no-store"})'
+            . '.then(function(r){return r.json();}).then(function(j){if(j&&j.ok&&(j.stato==="pronta"||j.stato==="non riuscita"))location.replace(location.pathname);})'
+            . '.catch(function(){});}setInterval(g,8000);'
+            . 'var t=document.getElementById("sc-tempo"),s=0;if(t)setInterval(function(){s++;t.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0");},1000);})();</script>';
+    }
+    return '<!doctype html><html lang="it"' . ($codice !== '' && $aspetta ? ' data-sc-lead="1"' : '') . '><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">'
+        . '<title>' . esc_html($titolo) . ' – SitoComodo</title><link rel="icon" href="/favicon.svg">'
+        . '<style>@font-face{font-family:"Space Grotesk";src:url(/fonts/space-grotesk-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}'
+        . '@font-face{font-family:Inter;src:url(/fonts/inter-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}'
+        . '@font-face{font-family:Inter;src:url(/fonts/inter-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap}'
+        . 'body{margin:0;font:17px/1.55 Inter,system-ui,sans-serif;color:#111827;background:#EEF4FF}'
+        . 'main{max-width:560px;margin:0 auto;padding:28px 20px 48px}'
+        . '.marchio{display:inline-flex;align-items:center;gap:10px;color:#111827;text-decoration:none;font:700 22px "Space Grotesk",sans-serif}'
+        . '.scheda{margin-top:24px;background:#FFF;border:2px solid #111827;border-radius:24px;box-shadow:6px 6px 0 #111827;padding:26px 22px}'
+        . 'h1{margin:0 0 10px;font:700 clamp(28px,7vw,36px)/1.15 "Space Grotesk",sans-serif;letter-spacing:-.01em}'
+        . 'p{margin:0 0 12px;color:#374151}ol{margin:16px 0 0;padding-left:22px;color:#374151}li{margin:6px 0}'
+        . '.bottone{display:flex;align-items:center;justify-content:center;min-height:58px;margin-top:18px;border-radius:16px;border:2px solid #111827;'
+        . 'background:#1D4ED8;color:#FFF;font-weight:600;font-size:18px;text-decoration:none;box-shadow:4px 4px 0 #111827}'
+        . '.piccolo{font-size:14px;color:#4B5563}.rotella{width:44px;height:44px;border:4px solid #C7D2FE;border-top-color:#1D4ED8;border-radius:50%;'
+        . 'animation:g 1s linear infinite;margin-bottom:16px}@keyframes g{to{transform:rotate(360deg)}}'
+        . '@media (prefers-reduced-motion:reduce){.rotella{animation:none}}a{color:#1D4ED8}</style></head><body><main>'
+        . '<a class="marchio" href="/"><img src="/apple-touch-icon.png" width="36" height="36" alt="" style="border-radius:9px">SitoComodo</a>'
+        . '<div class="scheda">' . $corpo . '</div></main><script src="/consenso.js" defer></script>' . $script . '</body></html>';
+}
+
+function sc_anteprima_servi($codice, $resto) {
+    nocache_headers();
+    header('X-Robots-Tag: noindex, nofollow');
+    if (sc_anteprima_codice_ok($codice)) sc_anteprima_controlla_ritardo($codice);
+    $a = sc_anteprima_codice_ok($codice) ? (sc_anteprime_leggi()[$codice] ?? null) : null;
+    $html = function ($t, $corpo, $aspetta = false, $codice_pagina = '') {
+        status_header(200);
+        header('Content-Type: text/html; charset=utf-8');
+        echo sc_anteprima_pagina($t, $corpo, $codice_pagina, $aspetta);
+        exit;
+    };
+    if (!$a) {
+        status_header(404);
+        header('Content-Type: text/html; charset=utf-8');
+        echo sc_anteprima_pagina('Anteprima non trovata', '<h1>Anteprima non trovata</h1><p>Il collegamento non è giusto oppure l\'anteprima è stata cancellata.</p>'
+            . '<a class="bottone" href="/ordina/">Crea la tua anteprima gratis</a>');
+        exit;
+    }
+    $resto = ltrim($resto, '/');
+    if ($resto === '' || substr($resto, -1) === '/') $resto .= 'index.html';
+    $pagina = (bool) preg_match('/\.html?$/i', $resto);
+    $stato = $a['stato'] ?? '';
+    $vista = (int) ($a['versione'] ?? 0) > 0 && in_array($stato, ['pronta', 'in modifica'], true);
+    $scaduta = $vista && $stato === 'pronta' && time() > (int) ($a['scade'] ?? 0);
+    $lo_voglio = '/ordine/?anteprima=' . $codice . '#dominio';
+    if (!$vista || $scaduta) {
+        if (!$pagina) { status_header(404); exit; }
+        $nome = esc_html($a['dati']['nome'] ?? 'la tua attività');
+        if ($scaduta) {
+            $html('Anteprima scaduta', '<h1>L\'anteprima è scaduta</h1><p>Era visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Il sito di ' . $nome
+                . ' però è pronto e ti aspetta: scegli il dominio e lo mettiamo online.</p><a class="bottone" href="' . esc_attr($lo_voglio) . '">Mettilo online · 99 €</a>'
+                . '<p class="piccolo" style="margin-top:16px">99 € IVA inclusa, una volta sola. Hai una domanda? Scrivici a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>.</p>');
+        }
+        if ($stato === 'in coda') {
+            $html('Anteprima in arrivo', '<h1>La tua anteprima arriva domani mattina</h1><p>Oggi abbiamo preparato tutte le anteprime gratis che potevamo. '
+                . 'Il sito di ' . $nome . ' lo prepariamo per primo domani mattina e ti mandiamo il link per email.</p>'
+                . '<p class="piccolo">Questa pagina resta valida: puoi tornare qui quando vuoi.</p>', true, $codice);
+        }
+        if ($stato === 'rifiutata') {
+            $html('Troppe anteprime', '<h1>Oggi ne hai già chieste tante</h1><p>Da questa connessione oggi sono già state chieste ' . SC_ANTEPRIME_STESSO_IP
+                . ' anteprime gratis. Se ti serve, scrivici a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a> e la prepariamo noi.</p>');
+        }
+        if ($stato === 'non riuscita') {
+            $html('Anteprima in ritardo', '<h1>Ci serve un po\' più di tempo</h1><p>Non siamo riusciti a preparare il sito di ' . $nome
+                . ' in automatico. Lo guardiamo noi e ti scriviamo entro poche ore.</p><p class="piccolo">Per qualsiasi cosa: <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a></p>');
+        }
+        $html('Prepariamo il tuo sito', '<div class="rotella" role="presentation"></div><h1>Stiamo preparando il sito di ' . $nome . '</h1>'
+            . '<p>Di solito ci vogliono pochi minuti. Resta pure qui: si apre da solo appena è pronto. Ti mandiamo il link anche per email.</p>'
+            . '<ol><li>Scegliamo foto e colori</li><li>Scriviamo i testi</li><li>Lo controlliamo da telefono e da computer</li></ol>'
+            . '<p class="piccolo" style="margin-top:16px">In preparazione da <span id="sc-tempo">0:00</span>. Poi lo vedi gratis per ' . SC_ANTEPRIMA_MINUTI
+            . ' minuti e paghi solo se ti piace.</p>', true, $codice);
+    }
+    $base = realpath(sc_anteprima_cartella($codice));
+    $file = $base ? realpath($base . '/' . $resto) : false;
+    if (!$base || !$file || strpos($file, $base . DIRECTORY_SEPARATOR) !== 0 || !is_file($file)) {
+        $file = $pagina && $base && is_file($base . '/404.html') ? $base . '/404.html' : false;
+        if (!$file) { status_header(404); exit; }
+        status_header(404);
+    } else {
+        status_header(200);
+    }
+    $tipi = ['html' => 'text/html; charset=utf-8', 'css' => 'text/css', 'js' => 'application/javascript', 'json' => 'application/json',
+             'txt' => 'text/plain; charset=utf-8', 'xml' => 'application/xml; charset=utf-8', 'svg' => 'image/svg+xml', 'png' => 'image/png',
+             'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', 'avif' => 'image/avif', 'gif' => 'image/gif',
+             'ico' => 'image/x-icon', 'woff2' => 'font/woff2', 'woff' => 'font/woff', 'webmanifest' => 'application/manifest+json'];
+    $est = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    if (!isset($tipi[$est])) { status_header(404); exit; }
+    header('Content-Type: ' . $tipi[$est]);
+    if ($est !== 'html') {
+        header('Cache-Control: private, max-age=600');
+        header('Content-Length: ' . filesize($file));
+        readfile($file);
+        exit;
+    }
+    $h = (string) file_get_contents($file);
+    $h = preg_replace('/<head([^>]*)>/i', '<head$1><meta name="robots" content="noindex,nofollow">', $h, 1);
+    $pos = strripos($h, '</body>');
+    $barra = sc_anteprima_barra($a, $lo_voglio);
+    $h = $pos !== false ? substr($h, 0, $pos) . $barra . substr($h, $pos) : $h . $barra;
+    header('Content-Length: ' . strlen($h));
+    echo $h;
+    exit;
+}
+
+// barra in alto sul sito in anteprima: tempo che resta, «Chiedi una modifica», «Mettilo online»
+function sc_anteprima_barra($a, $lo_voglio) {
+    $ultima = end($a['modifiche']) ?: [];
+    $dati = ['codice' => $a['codice'], 'scade' => (int) ($a['scade'] ?? 0), 'ora' => time(), 'versione' => (int) $a['versione'],
+             'stato' => $a['stato'], 'giri' => max(0, SC_ANTEPRIMA_GIRI - (int) $a['giri']), 'max' => SC_ANTEPRIMA_GIRI,
+             'fatto' => (string) ($ultima['fatto'] ?? ''), 'non_fatto' => (string) ($ultima['non_fatto'] ?? ''), 'voglio' => $lo_voglio];
+    $css = '#sc-barra{position:fixed;top:0;left:0;right:0;z-index:2147483000;display:flex;align-items:center;gap:10px;height:56px;padding:0 12px;'
+        . 'background:#111827;color:#FFF;font:14px/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 2px 0 #FDE047}'
+        . '#sc-barra .sc-info{flex:1 1 auto;min-width:0}#sc-barra .sc-info b{display:block;font-size:14px}'
+        . '#sc-barra .sc-info span{font-size:12px;color:#D1D5DB;white-space:nowrap}'
+        . '#sc-barra button,#sc-barra a.sc-voglio{flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 12px;'
+        . 'border-radius:12px;font:600 14px system-ui,-apple-system,sans-serif;text-decoration:none;cursor:pointer}'
+        . '#sc-barra button{background:transparent;color:#FFF;border:1.5px solid #6B7280}'
+        . '#sc-barra a.sc-voglio{background:#FDE047;color:#111827;border:1.5px solid #FDE047}'
+        . '#sc-barra button:focus-visible,#sc-barra a:focus-visible,#sc-mod button:focus-visible{outline:3px solid #F97316;outline-offset:2px}'
+        . 'body{padding-top:56px!important}.testata{top:56px!important}html{scroll-padding-top:150px!important}.st-servizi h2{top:160px!important}'
+        . '#sc-mod{position:fixed;inset:0;z-index:2147483001;display:none;align-items:flex-end;justify-content:center;background:rgba(17,24,39,.55);'
+        . 'font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#111827}'
+        . '#sc-mod.aperto{display:flex}#sc-mod .sc-pann{width:100%;max-width:520px;background:#FFF;border-radius:20px 20px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom))}'
+        . '@media (min-width:700px){#sc-mod{align-items:center}#sc-mod .sc-pann{border-radius:20px}}'
+        . '#sc-mod h2{margin:0 0 6px;font:700 20px/1.25 system-ui,sans-serif}#sc-mod p{margin:0 0 10px;color:#4B5563;font-size:15px}'
+        . '#sc-mod textarea{width:100%;box-sizing:border-box;min-height:120px;padding:12px;border:1.5px solid #9CA3AF;border-radius:12px;font:16px/1.45 system-ui,sans-serif}'
+        . '#sc-mod .sc-azioni{display:flex;gap:10px;margin-top:12px}#sc-mod .sc-azioni button{flex:1;min-height:50px;border-radius:14px;font:600 16px system-ui,sans-serif;cursor:pointer}'
+        . '#sc-mod .sc-annulla{background:#FFF;border:1.5px solid #9CA3AF;color:#111827}#sc-mod .sc-invia{background:#1D4ED8;border:1.5px solid #1D4ED8;color:#FFF}'
+        . '#sc-mod .sc-errore{color:#B91C1C;font-size:14px;margin:8px 0 0}'
+        . '#sc-avviso{position:fixed;left:12px;right:12px;top:68px;z-index:2147483000;max-width:520px;margin:0 auto;background:#FFF;color:#111827;border:2px solid #111827;'
+        . 'border-radius:16px;box-shadow:4px 4px 0 #111827;padding:14px 16px;font:15px/1.45 system-ui,sans-serif;display:none}'
+        . '#sc-avviso.aperto{display:block}#sc-avviso b{display:block;margin-bottom:4px}#sc-avviso button{margin-top:8px;background:none;border:0;color:#1D4ED8;font:600 15px system-ui,sans-serif;padding:0;cursor:pointer}'
+        . '@media (max-width:480px){#sc-barra .sc-lungo{display:none}#sc-barra{gap:8px;padding:0 10px}#sc-barra button,#sc-barra a.sc-voglio{padding:0 11px}}'
+        . '@media (max-width:360px){#sc-barra button,#sc-barra a.sc-voglio{padding:0 8px;font-size:13px}}';
+    $html = '<div id="sc-barra" role="region" aria-label="Anteprima di SitoComodo">'
+        . '<div class="sc-info"><b>Anteprima<span class="sc-lungo"> gratis</span></b><span id="sc-resta">ancora ' . SC_ANTEPRIMA_MINUTI . ':00</span></div>'
+        . '<button type="button" class="sc-mod-btn" id="sc-apri-mod">Modifica</button>'
+        . '<a class="sc-voglio" href="' . esc_attr($lo_voglio) . '">Lo voglio · 99 €</a></div>'
+        . '<div id="sc-avviso" role="status" aria-live="polite"></div>'
+        . '<div id="sc-mod" role="dialog" aria-modal="true" aria-labelledby="sc-mod-t"><div class="sc-pann">'
+        . '<h2 id="sc-mod-t">Cosa vuoi cambiare?</h2><p id="sc-mod-p">Scrivilo come lo diresti a voce, per esempio «metti il verde al posto del blu» o «togli il servizio consegne». '
+        . 'In pochi minuti ti facciamo vedere la nuova versione.</p>'
+        . '<label for="sc-mod-testo" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">La modifica che vuoi</label>'
+        . '<textarea id="sc-mod-testo" maxlength="1500"></textarea><p class="sc-errore" id="sc-mod-err" hidden></p>'
+        . '<div class="sc-azioni"><button type="button" class="sc-annulla" id="sc-mod-annulla">Annulla</button><button type="button" class="sc-invia" id="sc-mod-invia">Fai la modifica</button></div>'
+        . '</div></div>';
+    $js = '<script>(function(){var D=' . wp_json_encode($dati) . ',sfasa=Date.now()/1000-D.ora;'
+        . 'var resta=document.getElementById("sc-resta"),btn=document.getElementById("sc-apri-mod"),mod=document.getElementById("sc-mod"),'
+        . 'txt=document.getElementById("sc-mod-testo"),err=document.getElementById("sc-mod-err"),invia=document.getElementById("sc-mod-invia"),avv=document.getElementById("sc-avviso");'
+        . 'function avviso(t,s){avv.innerHTML="";var b=document.createElement("b");b.textContent=t;avv.appendChild(b);if(s){var p=document.createElement("div");p.textContent=s;avv.appendChild(p);}'
+        . 'var x=document.createElement("button");x.type="button";x.textContent="Chiudi";x.onclick=function(){avv.classList.remove("aperto");};avv.appendChild(x);avv.classList.add("aperto");}'
+        . 'function etichetta(){btn.textContent=D.giri>0?"Modifica ("+D.giri+")":"Modifica";}etichetta();'
+        . 'var attesa=D.stato==="in modifica";'
+        . 'function tic(){if(attesa){resta.textContent="sto facendo la modifica…";return;}var s=Math.round(D.scade-(Date.now()/1000-sfasa));'
+        . 'if(s<=0){location.reload();return;}resta.textContent=(innerWidth>480?"visibile ancora ":"ancora ")+Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}tic();setInterval(tic,1000);'
+        . 'function controlla(){fetch("/wp-json/sitocomodo/v1/anteprima-stato?codice="+D.codice,{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){'
+        . 'if(!j||!j.ok)return;if(j.versione>D.versione||(attesa&&j.stato==="pronta")){try{sessionStorage.setItem("sc-mostra-"+D.codice,"1");}catch(e){}location.reload();}}).catch(function(){});}'
+        . 'if(attesa)setInterval(controlla,8000);'
+        . 'try{if(sessionStorage.getItem("sc-mostra-"+D.codice)&&(D.fatto||D.non_fatto)){sessionStorage.removeItem("sc-mostra-"+D.codice);'
+        . 'avviso(D.fatto?"Modifica fatta":"Modifica non fatta",[D.fatto,D.non_fatto].filter(Boolean).join(" · "));}}catch(e){}'
+        . 'function apri(){if(attesa){avviso("Sto facendo la modifica","Tra pochi minuti questa pagina si aggiorna da sola.");return;}'
+        . 'if(D.giri<=0){avviso("Hai usato le "+D.max+" modifiche gratis","Dopo il pagamento le piccole modifiche restano gratis per 14 giorni: scrivici a info@sitocomodo.it.");return;}'
+        . 'err.hidden=true;mod.classList.add("aperto");setTimeout(function(){txt.focus();},50);}'
+        . 'function chiudi(){mod.classList.remove("aperto");btn.focus();}'
+        . 'btn.addEventListener("click",apri);document.getElementById("sc-mod-annulla").addEventListener("click",chiudi);'
+        . 'mod.addEventListener("click",function(e){if(e.target===mod)chiudi();});document.addEventListener("keydown",function(e){if(e.key==="Escape"&&mod.classList.contains("aperto"))chiudi();});'
+        . 'invia.addEventListener("click",function(){var t=txt.value.trim();if(t.length<4){err.textContent="Scrivi cosa vuoi cambiare.";err.hidden=false;txt.focus();return;}'
+        . 'invia.disabled=true;invia.textContent="Un attimo…";fetch("/wp-json/sitocomodo/v1/anteprima-modifica",{method:"POST",headers:{"Content-Type":"application/json"},'
+        . 'body:JSON.stringify({codice:D.codice,testo:t})}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});}).then(function(x){'
+        . 'invia.disabled=false;invia.textContent="Fai la modifica";if(x.ok&&x.j&&x.j.ok){mod.classList.remove("aperto");attesa=true;D.giri=x.j.giri_rimasti;etichetta();tic();'
+        . 'avviso("Modifica in corso","Di solito bastano pochi minuti: questa pagina si aggiorna da sola.");setInterval(controlla,8000);return;}'
+        . 'err.textContent=(x.j&&x.j.errore)||"Non siamo riusciti a mandare la richiesta. Riprova.";err.hidden=false;})'
+        . '.catch(function(){invia.disabled=false;invia.textContent="Fai la modifica";err.textContent="Connessione assente: riprova tra un attimo.";err.hidden=false;});});'
+        // nell'anteprima i moduli di contatto del sito non mandano niente
+        . 'document.addEventListener("submit",function(e){if(e.target.closest("#sc-mod"))return;e.preventDefault();'
+        . 'avviso("È un\'anteprima","Il modulo dei contatti funzionerà sul sito vero, dopo la messa online.");},true);'
+        . '})();</script>';
+    return '<style>' . $css . '</style>' . $html . $js;
+}
+
+// ---- bacheca: «Ordini SitoComodo» → «Anteprime gratis» (sono anche contatti da richiamare)
+add_action('admin_menu', function () {
+    add_submenu_page('sc-ordini', 'Anteprime gratis', 'Anteprime gratis', 'manage_options', 'sc-anteprime', 'sc_pagina_anteprime');
+});
+
+function sc_pagina_anteprime() {
+    if (!current_user_can('manage_options')) return;
+    $tutte = sc_anteprime_leggi();
+    uasort($tutte, function ($x, $y) { return ($y['creata'] ?? 0) <=> ($x['creata'] ?? 0); });
+    echo '<div class="wrap"><h1>Anteprime gratis</h1><p>Chi ha chiesto di vedere il sito prima di pagare (ultimi 30 giorni). Oggi avviate: '
+        . (int) sc_anteprime_avviate_oggi() . ' di ' . SC_ANTEPRIME_GIORNO . '. Restano visibili ' . SC_ANTEPRIMA_MINUTI . ' minuti per versione, '
+        . SC_ANTEPRIMA_GIRI . ' modifiche gratis.</p>';
+    echo '<table class="widefat striped"><thead><tr><th>Quando</th><th>Attività</th><th>Contatti</th><th>Stato</th><th>Modifiche</th><th>Dominio scelto</th><th>Anteprima</th></tr></thead><tbody>';
+    foreach (array_slice($tutte, 0, 200) as $a) {
+        $d = $a['dati'] ?? [];
+        $mod = [];
+        foreach (($a['modifiche'] ?? []) as $m) $mod[] = esc_html(mb_substr((string) ($m['testo'] ?? ''), 0, 120, 'UTF-8'));
+        echo '<tr><td>' . esc_html(wp_date('d/m H:i', (int) ($a['creata'] ?? 0))) . '</td>'
+            . '<td><strong>' . esc_html($d['nome'] ?? '') . '</strong><br>' . esc_html(($d['tipo'] ?? '') . (($d['citta'] ?? '') !== '' ? ' · ' . $d['citta'] : '')) . '</td>'
+            . '<td>' . esc_html($d['telefono'] ?? '') . '<br>' . esc_html($d['email'] ?? '') . '</td>'
+            . '<td>' . esc_html($a['stato'] ?? '') . (!empty($a['note']) ? '<br><small>' . esc_html(mb_substr((string) $a['note'], 0, 200, 'UTF-8')) . '</small>' : '') . '</td>'
+            . '<td>' . ($mod ? implode('<br>', $mod) : '—') . '</td>'
+            . '<td>' . esc_html($a['dominio_scelto'] ?? '—') . '</td>'
+            . '<td><a href="' . esc_url(sc_anteprima_url($a['codice'])) . '" target="_blank" rel="noopener">apri</a></td></tr>';
+    }
+    echo '</tbody></table></div>';
+}
