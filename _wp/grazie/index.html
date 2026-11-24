@@ -152,6 +152,42 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
 <div><p class="sotto" id="riga-pagato">Ordine ricevuto</p><h1 id="titolo-grazie">Grazie!</h1></div>
 </div>
 
+<section aria-labelledby="t-intest" class="solo-nuovo" id="blocco-intest" hidden>
+<form id="intest" novalidate>
+<h2 id="t-intest">Ultimo passo: a chi intestiamo il dominio?</h2>
+<p class="nota-campo" style="margin:-4px 0 12px">Il dominio <strong id="g-dominio"></strong> sarà a nome di questa persona o azienda. Servono i dati veri, li chiede il registro dei domini: ci vogliono due minuti.</p>
+<fieldset class="scelta-tipo"><legend class="vh">Chi è l'intestatario</legend>
+<label><input type="radio" name="tipo" value="privato" checked> Privato</label>
+<label><input type="radio" name="tipo" value="ditta"> Ditta individuale o professionista</label>
+<label><input type="radio" name="tipo" value="societa"> Società o associazione</label>
+</fieldset>
+<div class="griglia">
+<div class="campo" data-per="privato ditta"><input id="i-nome" placeholder=" " autocomplete="given-name"><label for="i-nome">Nome</label></div>
+<div class="campo" data-per="privato ditta"><input id="i-cognome" placeholder=" " autocomplete="family-name"><label for="i-cognome">Cognome</label></div>
+<div class="campo intera" data-per="ditta societa"><input id="i-ragione" placeholder=" " autocomplete="organization"><label for="i-ragione">Ragione sociale</label></div>
+<div class="campo" data-per="privato ditta"><input id="i-cf" placeholder=" " maxlength="16" autocapitalize="characters" spellcheck="false"><label for="i-cf">Codice fiscale</label></div>
+<div class="campo" data-per="ditta societa"><input id="i-piva" placeholder=" " maxlength="11" inputmode="numeric"><label for="i-piva">Partita IVA</label></div>
+<div class="campo intera"><input id="i-indirizzo" placeholder=" " autocomplete="street-address"><label for="i-indirizzo">Indirizzo e numero civico</label></div>
+<div class="campo"><input id="i-cap" placeholder=" " maxlength="5" inputmode="numeric" autocomplete="postal-code"><label for="i-cap">CAP</label></div>
+<div class="campo"><input id="i-citta" placeholder=" " autocomplete="address-level2"><label for="i-citta">Città</label></div>
+<div class="campo"><input id="i-prov" placeholder=" " maxlength="2" autocapitalize="characters" spellcheck="false"><label for="i-prov">Provincia (es. MI)</label></div>
+<div class="campo"><input id="i-tel" type="tel" placeholder=" " autocomplete="tel"><label for="i-tel">Telefono</label></div>
+</div>
+<label class="conferma"><input type="checkbox" id="i-ok"> <span>Confermo che i dati sono corretti e che il dominio va registrato a questo nome, secondo le regole del registro. Se finisce in .it, il Registro .it ti manderà un'email per confermarli.</span></label>
+<div id="blocco-it" hidden>
+<label class="conferma"><input type="checkbox" id="i-reg"> <span>Dichiaro di avere cittadinanza, residenza o sede in un paese dello Spazio Economico Europeo, in Svizzera, a San Marino o in Vaticano, e di avere diritto a usare questo nome. Accetto le regole del Registro .it (assegnazione dei nomi e risoluzione delle dispute), la giurisdizione italiana e l'informativa privacy del Registro. Accetto in modo esplicito che, se i dati sono falsi o sbagliati, il Registro revochi il dominio senza rimborsi, e sollevo il Registro da ogni responsabilità sull'uso del dominio. <a href="https://www.nic.it/" target="_blank" rel="noopener">Leggi le condizioni del Registro .it</a></span></label>
+<label class="conferma" data-per="privato"><input type="checkbox" id="i-whois"> <span>Acconsento a rendere visibili su Internet i miei dati di intestatario (Whois del Registro .it). Se non la spunti, restano riservati.</span></label>
+</div>
+<p class="errore" id="errore-intest" role="alert" hidden></p>
+<button type="submit" class="primario" id="salva-intest">Conferma l'intestatario</button>
+</form>
+</section>
+
+<div class="riquadro" id="intest-ok" role="status" hidden>
+<h2>Dati dell'intestatario ricevuti</h2>
+<p id="intest-ok-testo"></p>
+</div>
+
 <div class="riquadro">
 <h2><span class="solo-nuovo">Il tuo sito è in preparazione</span><span class="solo-rifai">Il sito nuovo è in preparazione</span></h2>
 <p id="quando">Il tuo sito sarà online entro 30 minuti su un indirizzo provvisorio, e sul tuo dominio appena il registro lo attiva. Poi ti mandiamo per email tutte le credenziali di sito, hosting e dominio.</p>
@@ -219,6 +255,101 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
     : 'Il tuo sito sarà online entro le ' + ora + ' su un indirizzo provvisorio, e sul tuo dominio appena il registro lo attiva. Poi ti mandiamo per email tutte le credenziali di sito, hosting e dominio.';
   document.getElementById('nota-it').hidden = RIFAI || !/\.it$/.test(dom);
   document.getElementById('prova').hidden = INVIO_ATTIVO;
+
+  // ---- 24/11/2026: i dati dell'intestatario del dominio si chiedono qui, dopo il pagamento (prima erano nella cassa)
+  var par = new URLSearchParams(location.search), sessione = par.get('session_id') || '';
+  var domG = dom || pulito(par.get('dominio'));
+  var blocco = document.getElementById('blocco-intest'), okBox = document.getElementById('intest-ok');
+  var CAMPI = {nome: 'i-nome', cognome: 'i-cognome', ragione: 'i-ragione', cf: 'i-cf', piva: 'i-piva', indirizzo: 'i-indirizzo',
+               cap: 'i-cap', citta: 'i-citta', provincia: 'i-prov', telefono: 'i-tel'};
+  var punto_it = !domG || /\.it$/.test(domG);   // dominio sconosciuto (altro telefono): meglio chiedere anche le regole del .it
+  function nomeIntestatario(d){ return d.tipo === 'societa' ? (d.ragione || '') : ((d.nome || '') + ' ' + (d.cognome || '')).trim(); }
+  function mostraOk(d){
+    var chi = nomeIntestatario(d);
+    document.getElementById('intest-ok-testo').textContent = 'Registriamo ' + (domG || 'il tuo dominio') + (chi ? ' a nome di ' + chi : '')
+      + '. Appena il registro lo attiva, il sito passa dall’indirizzo provvisorio al tuo dominio.';
+    okBox.hidden = false;
+  }
+  if (!RIFAI && sessione && INVIO_ATTIVO) {
+    if (o.intestatario_ok === sessione) mostraOk(o.intestatario || {});
+    else { blocco.hidden = false; preparaIntestatario(); }
+  }
+
+  function preparaIntestatario(){
+    var form = document.getElementById('intest'), errInt = document.getElementById('errore-intest');
+    var conferma = document.getElementById('i-ok'), regIt = document.getElementById('i-reg'), whois = document.getElementById('i-whois');
+    var btn = document.getElementById('salva-intest'), TESTO_BTN = btn.textContent;
+    var salvato = o.intestatario || {};
+    document.getElementById('g-dominio').textContent = domG || 'che hai scelto';
+    document.getElementById('blocco-it').hidden = !punto_it;
+    if (salvato.registro_it) regIt.checked = true;
+    if (salvato.whois) whois.checked = true;
+    regIt.addEventListener('change', function(){ errInt.hidden = true; });
+    function tipo(){ var r = form.querySelector('input[name=tipo]:checked'); return r ? r.value : 'privato'; }
+    function aggiornaTipo(){
+      var t = tipo();
+      form.querySelectorAll('[data-per]').forEach(function(d){ d.hidden = d.getAttribute('data-per').split(' ').indexOf(t) < 0; });
+    }
+    Object.keys(CAMPI).forEach(function(k){
+      var el = document.getElementById(CAMPI[k]);
+      if (salvato[k]) el.value = salvato[k];
+      el.addEventListener('input', function(){ el.removeAttribute('aria-invalid'); errInt.hidden = true; });
+    });
+    var tel = document.getElementById('i-tel');
+    if (!tel.value && o.telefono) tel.value = o.telefono;   // il telefono del passo 2 non va riscritto
+    if (salvato.tipo) { var r = form.querySelector('input[name=tipo][value=' + salvato.tipo + ']'); if (r) r.checked = true; }
+    form.querySelectorAll('input[name=tipo]').forEach(function(r){ r.addEventListener('change', aggiornaTipo); });
+    aggiornaTipo();
+
+    function leggiIntestatario(){
+      var d = {tipo: tipo()};
+      Object.keys(CAMPI).forEach(function(k){ d[k] = document.getElementById(CAMPI[k]).value.trim(); });
+      d.cf = d.cf.toUpperCase().replace(/\s/g, ''); d.provincia = d.provincia.toUpperCase(); d.piva = d.piva.replace(/\s/g, '');
+      d.registro_it = punto_it && regIt.checked; d.whois = punto_it && d.tipo === 'privato' && whois.checked;
+      return d;
+    }
+    // restituisce [campo, messaggio] del primo errore, oppure null
+    function controlla(d){
+      var t = d.tipo, serve = function(k){ var el = document.getElementById(CAMPI[k]); return !el.closest('[data-per]') || !el.closest('[data-per]').hidden; };
+      if (serve('nome') && !d.nome) return ['nome', 'Scrivi il nome dell\'intestatario.'];
+      if (serve('cognome') && !d.cognome) return ['cognome', 'Scrivi il cognome dell\'intestatario.'];
+      if (t === 'societa' && !d.ragione) return ['ragione', 'Scrivi la ragione sociale.'];
+      if (serve('cf') && !/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(d.cf)) return ['cf', 'Il codice fiscale ha 16 caratteri, es. RSSMRA80A01F205X.'];
+      if (serve('piva') && !/^[0-9]{11}$/.test(d.piva)) return ['piva', 'La partita IVA ha 11 cifre.'];
+      if (d.indirizzo.length < 5) return ['indirizzo', 'Scrivi via e numero civico.'];
+      if (!/^[0-9]{5}$/.test(d.cap)) return ['cap', 'Il CAP ha 5 cifre.'];
+      if (d.citta.length < 2) return ['citta', 'Scrivi la città.'];
+      if (!/^[A-Z]{2}$/.test(d.provincia)) return ['provincia', 'Scrivi la sigla della provincia, es. MI.'];
+      if (d.telefono.replace(/[^0-9]/g, '').length < 6) return ['telefono', 'Scrivi un numero di telefono.'];
+      return null;
+    }
+    function mostraErrore(k, msg){
+      errInt.textContent = msg; errInt.hidden = false;
+      if (k) { var el = document.getElementById(CAMPI[k]); el.setAttribute('aria-invalid', 'true'); el.focus(); }
+    }
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var d = leggiIntestatario(), errore = controlla(d);
+      o.intestatario = d; scrivi(o);
+      if (errore) { mostraErrore(errore[0], errore[1]); return; }
+      if (!conferma.checked) { mostraErrore(null, 'Spunta la conferma dei dati dell\'intestatario.'); conferma.focus(); return; }
+      if (punto_it && !regIt.checked) { mostraErrore(null, 'Per un dominio .it spunta l\'accettazione delle regole del Registro .it.'); regIt.focus(); return; }
+      var dati = Object.assign({sessione: sessione, rif: domG ? domG.replace(/\./g, '_') : '', email: o.email_cliente || o.email || ''}, d);
+      btn.disabled = true; btn.textContent = 'Un attimo…';
+      fetch('/wp-json/sitocomodo/v1/intestatario', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dati)})
+        .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
+        .then(function(x){
+          if (x.ok && x.j && x.j.ok) {
+            o.intestatario_ok = sessione; scrivi(o);
+            blocco.hidden = true; mostraOk(d); okBox.scrollIntoView({block: 'center'});
+            return;
+          }
+          btn.disabled = false; btn.textContent = TESTO_BTN;
+          mostraErrore(null, (x.j && x.j.errore) || 'Non siamo riusciti a salvare i dati. Riprova tra un attimo.');
+        })
+        .catch(function(){ btn.disabled = false; btn.textContent = TESTO_BTN; mostraErrore(null, 'Connessione assente: riprova tra un attimo.'); });
+    });
+  }
 })();
 </script>
 <script src="/consenso.js" defer></script>

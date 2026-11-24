@@ -288,9 +288,9 @@ function sc_manda_email_pagato($dati, $pag) {
             $righe[] = 'La fabbrica legge il sito vecchio, prepara il nuovo su un indirizzo provvisorio e manda al cliente la guida per collegare il dominio (senza toccare l\'email).';
         } else {
             $righe[] = 'INTESTATARIO DEL DOMINIO:';
-            $righe[] = empty($dati['intestatario']) ? 'mancano i dati: il dominio va comprato a mano dopo averli chiesti al cliente'
+            $righe[] = empty($dati['intestatario']) ? 'non ancora arrivato: il cliente lo inserisce nella pagina di ringraziamento (se tra 20 minuti manca ancora, ti avviso)'
                                                     : sc_intestatario_testo($dati['intestatario']);
-            $righe[] = 'Il dominio viene comprato in automatico su OVH: ti arriva un\'altra email con l\'esito.';
+            $righe[] = 'Il dominio viene comprato in automatico su OVH appena ci sono i dati: ti arriva un\'altra email con l\'esito.';
         }
         $righe[] = '';
         $righe[] = 'FOTO E LOGO (' . count($dati['file'] ?? []) . '):';
@@ -401,19 +401,35 @@ add_action('rest_api_init', function () {
                 $ordini[$indice]['stato'] = 'pagato: importo da controllare';
             }
             $ordini[$indice]['pagamento'] = $pag;
-            if (empty($ordini[$indice]['intestatario'])) {   // dati arrivati prima del modulo, o senza modulo
+            if (empty($ordini[$indice]['intestatario'])) {   // dati arrivati prima del webhook (pagina grazie) o prima del modulo
                 $sospesi = get_option('sc_intestatari_sospesi', []);
-                if (is_array($sospesi) && !empty($sospesi[$rif])) {
-                    $ordini[$indice]['intestatario'] = $sospesi[$rif];
-                    unset($sospesi[$rif]);
-                    update_option('sc_intestatari_sospesi', $sospesi, false);
+                foreach (['sess:' . $sessione, $rif] as $chiave) {
+                    if ($chiave !== '' && $chiave !== 'sess:' && is_array($sospesi) && !empty($sospesi[$chiave])) {
+                        $ordini[$indice]['intestatario'] = $sospesi[$chiave];
+                        if (!is_email($ordini[$indice]['intestatario']['email'] ?? '')) {
+                            $ordini[$indice]['intestatario']['email'] = sanitize_email($pag['email_cliente'] ?: ($ordini[$indice]['email'] ?? ''));
+                        }
+                        unset($sospesi[$chiave]);
+                        update_option('sc_intestatari_sospesi', $sospesi, false);
+                        break;
+                    }
                 }
             }
             $ordini[$indice]['email_inviata'] = sc_manda_email_pagato($ordini[$indice], $pag);
             sc_ordini_scrivi($ordini);
-            // acquisto del dominio su OVH (sito nuovo) o costruzione diretta (rifacimento): subito dopo, fuori dalla risposta a Stripe
+            // acquisto del dominio su OVH (sito nuovo) o costruzione diretta (rifacimento): subito dopo, fuori dalla risposta a Stripe.
+            // 24/11/2026: l'intestatario si chiede dopo il pagamento (pagina grazie). Se non c'è ancora, il dominio si compra
+            // appena arriva (/intestatario); il sito parte comunque tra 15 minuti sull'indirizzo provvisorio, e dopo 20 minuti
+            // senza dati parte il promemoria (a info@ e, se le email ai clienti sono accese, al cliente).
             if (!empty($ordini[$indice]['dominio']) && empty($pag['da_controllare'])) {
-                wp_schedule_single_event(time(), $rifai ? 'sc_fabbrica_avvia_evento' : 'sc_compra_dominio', [$sessione]);
+                if ($rifai) {
+                    wp_schedule_single_event(time(), 'sc_fabbrica_avvia_evento', [$sessione]);
+                } elseif (!empty($ordini[$indice]['intestatario'])) {
+                    wp_schedule_single_event(time(), 'sc_compra_dominio', [$sessione]);
+                } else {
+                    wp_schedule_single_event(time() + 15 * MINUTE_IN_SECONDS, 'sc_fabbrica_avvia_evento', [$sessione]);
+                    wp_schedule_single_event(time() + 20 * MINUTE_IN_SECONDS, 'sc_intestatario_promemoria', [$sessione]);
+                }
                 spawn_cron();
             }
             return ['ok' => true];
@@ -432,7 +448,8 @@ add_action('rest_api_init', function () {
 });
 
 // ---------------------------------------------------------------- 4. dominio: intestatario e acquisto automatico su OVH
-// Il checkout manda i dati dell'intestatario (POST /wp-json/sitocomodo/v1/intestatario) prima di andare su Stripe.
+// Dal 24/11/2026 i dati dell'intestatario si chiedono DOPO il pagamento: la pagina /grazie/ li manda con la sessione Stripe
+// (POST /wp-json/sitocomodo/v1/intestatario con «sessione»). Prima li mandava il checkout con il solo «rif»: resta accettato.
 // A pagamento confermato parte sc_compra_dominio: carrello OVH → prezzo (tetto 12 € IVA inclusa) → contatto intestatario
 // → ordine → pagamento con il credito prepagato OVH. Esito sempre per email a info@. Le chiavi OVH le incolla Giuseppe
 // nella pagina «Ordini SitoComodo»; finché l'acquisto non è acceso, l'email dice di comprarlo a mano.
@@ -489,6 +506,8 @@ add_action('rest_api_init', function () {
             $d = $r->get_json_params();
             if (!is_array($d)) return new WP_REST_Response(['ok' => false, 'errore' => 'Dati mancanti.'], 400);
             $rif = preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) ($d['rif'] ?? '')));
+            $sessione = preg_replace('/[^A-Za-z0-9_]/', '', (string) ($d['sessione'] ?? ''));
+            if ($sessione !== '') return sc_intestatario_dopo_pagamento($sessione, $d);
             if ($rif === '') return new WP_REST_Response(['ok' => false, 'errore' => 'Manca il dominio: torna a «Dominio».'], 400);
             $i = sc_intestatario_pulito($d);
             $err = sc_intestatario_errore($i);
@@ -509,6 +528,82 @@ add_action('rest_api_init', function () {
             return ['ok' => true, 'sospeso' => true];
         },
     ]);
+});
+
+// 24/11/2026: intestatario mandato dalla pagina grazie, con la sessione Stripe (la conosce solo chi ha pagato)
+function sc_intestatario_dopo_pagamento($sessione, $d) {
+    $ordini = sc_ordini_leggi();
+    $k = null;
+    for ($x = count($ordini) - 1; $x >= 0; $x--) {
+        if (($ordini[$x]['pagamento']['sessione'] ?? '') === $sessione) { $k = $x; break; }
+    }
+    $i = sc_intestatario_pulito($d);
+    if ($k !== null && !is_email($i['email'])) {
+        $i['email'] = sanitize_email((string) ($ordini[$k]['pagamento']['email_cliente'] ?? '')) ?: sanitize_email((string) ($ordini[$k]['email'] ?? ''));
+    }
+    $err = sc_intestatario_errore($i);
+    if ($err !== '' && !($k === null && $err === 'email non valida')) {   // senza ordine l'email la mette il webhook
+        return new WP_REST_Response(['ok' => false, 'errore' => 'Controlla i dati dell\'intestatario: ' . $err . '.'], 400);
+    }
+    $dominio = $k !== null ? (string) ($ordini[$k]['dominio'] ?? '') : str_replace('_', '.', preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) ($d['rif'] ?? ''))));
+    if (preg_match('/\.it$/', $dominio) && empty($i['registro_it'])) {
+        return new WP_REST_Response(['ok' => false, 'errore' => 'Per un dominio .it devi accettare le regole del Registro .it.'], 400);
+    }
+    if ($k === null) {   // il webhook di Stripe non è ancora arrivato: li tiene da parte, li attacca il webhook
+        $sospesi = get_option('sc_intestatari_sospesi', []);
+        if (!is_array($sospesi)) $sospesi = [];
+        $sospesi['sess:' . $sessione] = $i;
+        update_option('sc_intestatari_sospesi', array_slice($sospesi, -100, null, true), false);
+        return ['ok' => true, 'sospeso' => true];
+    }
+    if (($ordini[$k]['offerta'] ?? '') === 'rifai') return ['ok' => true, 'non_serve' => true];
+    $stato = $ordini[$k]['dominio_acquisto']['stato'] ?? '';
+    if (in_array($stato, ['comprato', 'in corso', 'ordinato, da pagare'], true)) return ['ok' => true, 'gia_fatto' => true];
+    $ordini[$k]['intestatario'] = $i;
+    sc_ordini_scrivi($ordini);
+    if (!empty($ordini[$k]['pagamento']['da_controllare'])) return ['ok' => true];   // importo da controllare: decide Giuseppe
+    wp_schedule_single_event(time(), 'sc_compra_dominio', [$sessione]);
+    spawn_cron();
+    return ['ok' => true];
+}
+
+// 24/11/2026: 20 minuti dopo il pagamento, se mancano ancora i dati dell'intestatario
+add_action('sc_intestatario_promemoria', function ($sessione) {
+    $ordini = sc_ordini_leggi();
+    foreach ($ordini as $o) {
+        if (($o['pagamento']['sessione'] ?? '') !== $sessione) continue;
+        if (!empty($o['intestatario']) || ($o['offerta'] ?? '') === 'rifai' || empty($o['dominio'])) return;
+        $link = add_query_arg(['session_id' => $sessione, 'dominio' => $o['dominio']], home_url('/grazie/'));
+        $cliente = sanitize_email((string) ($o['pagamento']['email_cliente'] ?? '')) ?: sanitize_email((string) ($o['email'] ?? ''));
+        $al_cliente = '';
+        if ($cliente && get_option('sc_email_cliente', '') === '1') {
+            $nome = trim((string) ($o['pagamento']['nome_cliente'] ?? ''));
+            $righe_c = [
+                'Buongiorno' . ($nome !== '' ? ' ' . strtok($nome, ' ') : '') . ',',
+                '',
+                'grazie per il tuo ordine. Il sito di ' . ($o['nome'] ?? 'la tua attività') . ' è in preparazione.',
+                'Per registrare il dominio ' . $o['dominio'] . ' a tuo nome ci mancano i dati dell\'intestatario, richiesti dal registro dei domini.',
+                'Puoi inserirli qui, ci vogliono due minuti:',
+                $link,
+                '',
+                'Appena li riceviamo registriamo il dominio e il sito passa dall\'indirizzo provvisorio al tuo dominio.',
+                'Per qualsiasi dubbio puoi rispondere a questa email.',
+                '',
+                'Il team di SitoComodo',
+                SC_DESTINATARIO,
+            ];
+            $al_cliente = wp_mail($cliente, 'Manca un ultimo dato per il tuo dominio – ' . $o['dominio'], implode("\n", $righe_c),
+                ['Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . SC_DESTINATARIO]) ? 'sì' : 'non partita';
+        }
+        $righe = ['Il cliente ha pagato ma non ha ancora mandato i dati dell\'intestatario: il dominio ' . $o['dominio'] . ' NON è ancora comprato.',
+                  'Il sito si costruisce lo stesso sull\'indirizzo provvisorio. Appena il cliente manda i dati, il dominio si compra da solo.',
+                  '',
+                  'Cliente: ' . ($o['nome'] ?? '') . ' · telefono ' . ($o['telefono'] ?? '') . ' · email ' . $cliente,
+                  'Link da mandargli per inserire i dati: ' . $link,
+                  'Promemoria al cliente: ' . ($al_cliente !== '' ? $al_cliente : 'no (email ai clienti spente): mandaglielo tu')];
+        wp_mail(SC_DESTINATARIO, 'Mancano i dati dell\'intestatario: ' . $o['dominio'], implode("\n", $righe), ['Content-Type: text/plain; charset=UTF-8']);
+        return;
+    }
 });
 
 // risposte alle sezioni del modulo del Registro .it (il cliente le accetta al checkout; il Whois pubblico solo se lo sceglie)
@@ -749,6 +844,15 @@ function sc_compra_dominio($sessione, $forza = false) {
     $righe[] = 'Ordine del cliente: ' . ($ordini[$k]['nome'] ?? '') . ' — pagato il ' . ($ordini[$k]['pagamento']['quando'] ?? '');
     wp_mail(SC_DESTINATARIO, $oggetto, implode("\n", $righe), ['Content-Type: text/plain; charset=UTF-8']);
     // il dominio è a posto (o è stato segnalato): ora la fabbrica costruisce il sito
+    if ($esito['ok'] && !empty($ordini[$k]['sito']['avviata'])) {
+        // 24/11/2026: sito già costruito sull'indirizzo provvisorio prima dei dati dell'intestatario: si riprova a collegare il dominio
+        $ordini[$k]['sito']['tentativi'] = 0;
+        sc_ordini_scrivi($ordini);
+        if (!wp_next_scheduled('sc_fabbrica_ricollega', [$sessione])) {
+            wp_schedule_single_event(time() + 10 * MINUTE_IN_SECONDS, 'sc_fabbrica_ricollega', [$sessione]);
+        }
+        return;
+    }
     sc_fabbrica_avvia($sessione);
 }
 

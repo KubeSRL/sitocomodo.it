@@ -152,7 +152,7 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
 <li><a href="../ordine/">Logo e attività</a></li>
 <li aria-current="step"><span class="solo-nuovo">Dominio e pagamento</span><span class="solo-rifai">Il tuo sito e pagamento</span></li>
 </ol></nav>
-<h1><span class="solo-nuovo">Ultimo passaggio: intestatario e pagamento</span><span class="solo-rifai">Ultimo passaggio: il pagamento</span></h1>
+<h1>Ultimo passaggio: il pagamento</h1>
 <p class="sotto"><span class="solo-nuovo">Controlla il riepilogo e paga: il tuo sito è online entro 30 minuti.*</span><span class="solo-rifai">Controlla il riepilogo e paga: il sito nuovo è pronto entro 30 minuti.*</span></p>
 
 <p class="avviso" id="manca" style="margin-top:20px" hidden><span class="solo-nuovo">Prima scegli il sito, mandaci il logo e scegli il dominio:</span><span class="solo-rifai">Prima scegli il sito, mandaci il logo e scrivi l'indirizzo del sito di adesso:</span> <a href="../ordina/">comincia da qui</a>.</p>
@@ -179,32 +179,9 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
 <p class="nota-campo" style="margin:-4px 0 0">Resta tuo, dove ce l'hai: non serve registrarlo di nuovo e la tua email non si tocca. Dopo il pagamento ti mandiamo per email il link per guardare il sito nuovo e la guida per collegarlo. Se non ci riesci, lo facciamo noi.</p>
 </section>
 
-<section aria-labelledby="t-intest" class="solo-nuovo">
-<h2 id="t-intest">Intestatario del dominio</h2>
-<p class="nota-campo" style="margin:-4px 0 12px">Il dominio sarà a nome di questa persona o azienda: servono i dati veri, li chiede il registro dei domini.</p>
-<fieldset class="scelta-tipo"><legend class="vh">Chi è l'intestatario</legend>
-<label><input type="radio" name="tipo" value="privato" checked> Privato</label>
-<label><input type="radio" name="tipo" value="ditta"> Ditta individuale o professionista</label>
-<label><input type="radio" name="tipo" value="societa"> Società o associazione</label>
-</fieldset>
-<div class="griglia">
-<div class="campo" data-per="privato ditta"><input id="i-nome" placeholder=" " autocomplete="given-name"><label for="i-nome">Nome</label></div>
-<div class="campo" data-per="privato ditta"><input id="i-cognome" placeholder=" " autocomplete="family-name"><label for="i-cognome">Cognome</label></div>
-<div class="campo intera" data-per="ditta societa"><input id="i-ragione" placeholder=" " autocomplete="organization"><label for="i-ragione">Ragione sociale</label></div>
-<div class="campo" data-per="privato ditta"><input id="i-cf" placeholder=" " maxlength="16" autocapitalize="characters" spellcheck="false"><label for="i-cf">Codice fiscale</label></div>
-<div class="campo" data-per="ditta societa"><input id="i-piva" placeholder=" " maxlength="11" inputmode="numeric"><label for="i-piva">Partita IVA</label></div>
-<div class="campo intera"><input id="i-indirizzo" placeholder=" " autocomplete="street-address"><label for="i-indirizzo">Indirizzo e numero civico</label></div>
-<div class="campo"><input id="i-cap" placeholder=" " maxlength="5" inputmode="numeric" autocomplete="postal-code"><label for="i-cap">CAP</label></div>
-<div class="campo"><input id="i-citta" placeholder=" " autocomplete="address-level2"><label for="i-citta">Città</label></div>
-<div class="campo"><input id="i-prov" placeholder=" " maxlength="2" autocapitalize="characters" spellcheck="false"><label for="i-prov">Provincia (es. MI)</label></div>
-<div class="campo"><input id="i-tel" type="tel" placeholder=" " autocomplete="tel"><label for="i-tel">Telefono</label></div>
-</div>
-<label class="conferma"><input type="checkbox" id="i-ok"> <span>Confermo che i dati sono corretti e che il dominio va registrato a questo nome, secondo le regole del registro. Se finisce in .it, il Registro .it ti manderà un'email per confermarli.</span></label>
-<div id="blocco-it" hidden>
-<label class="conferma"><input type="checkbox" id="i-reg"> <span>Dichiaro di avere cittadinanza, residenza o sede in un paese dello Spazio Economico Europeo, in Svizzera, a San Marino o in Vaticano, e di avere diritto a usare questo nome. Accetto le regole del Registro .it (assegnazione dei nomi e risoluzione delle dispute), la giurisdizione italiana e l'informativa privacy del Registro. Accetto in modo esplicito che, se i dati sono falsi o sbagliati, il Registro revochi il dominio senza rimborsi, e sollevo il Registro da ogni responsabilità sull'uso del dominio. <a href="https://www.nic.it/" target="_blank" rel="noopener">Leggi le condizioni del Registro .it</a></span></label>
-<label class="conferma" data-per="privato"><input type="checkbox" id="i-whois"> <span>Acconsento a rendere visibili su Internet i miei dati di intestatario (Whois del Registro .it). Se non la spunti, restano riservati.</span></label>
-</div>
-<p class="errore" id="errore-intest" hidden></p>
+<section aria-labelledby="t-dominio" class="solo-nuovo">
+<h2 id="t-dominio">Il tuo dominio</h2>
+<p class="nota-campo" style="margin:-4px 0 0">Lo registriamo a tuo nome. Dopo il pagamento ti chiediamo i dati dell'intestatario: li vuole il registro dei domini e ci vogliono due minuti.</p>
 </section>
 
 <button type="submit" class="primario" id="paga"><span class="solo-nuovo">Paga 99,00 €</span><span class="solo-rifai">Paga 79,00 €</span></button>
@@ -271,90 +248,18 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
   manca.hidden = pronto;
   email.addEventListener('input', function(){ if (email.checkValidity()) { email.removeAttribute('aria-invalid'); errMail.hidden = true; } });
 
-  // ---- intestatario del dominio
-  var CAMPI = {nome: 'i-nome', cognome: 'i-cognome', ragione: 'i-ragione', cf: 'i-cf', piva: 'i-piva', indirizzo: 'i-indirizzo',
-               cap: 'i-cap', citta: 'i-citta', provincia: 'i-prov', telefono: 'i-tel'};
-  var errInt = document.getElementById('errore-intest'), conferma = document.getElementById('i-ok'), paga = document.getElementById('paga');
-  var salvato = o.intestatario || {};
-  var punto_it = /\.it$/.test(dom || ''), regIt = document.getElementById('i-reg'), whois = document.getElementById('i-whois');
-  document.getElementById('blocco-it').hidden = !punto_it;
-  if (salvato.registro_it) regIt.checked = true;
-  if (salvato.whois) whois.checked = true;
-  regIt.addEventListener('change', function(){ errInt.hidden = true; });
-  function tipo(){ var r = form.querySelector('input[name=tipo]:checked'); return r ? r.value : 'privato'; }
-  function aggiornaTipo(){
-    var t = tipo();
-    form.querySelectorAll('[data-per]').forEach(function(d){ d.hidden = d.getAttribute('data-per').split(' ').indexOf(t) < 0; });
-  }
-  Object.keys(CAMPI).forEach(function(k){
-    var el = document.getElementById(CAMPI[k]);
-    if (salvato[k]) el.value = salvato[k];
-    el.addEventListener('input', function(){ el.removeAttribute('aria-invalid'); errInt.hidden = true; });
-  });
-  // 23/11/2026: il telefono scritto nel passo 2 non va riscritto
-  var tel = document.getElementById('i-tel');
-  if (!tel.value && o.telefono) tel.value = o.telefono;
-  if (salvato.tipo) { var r = form.querySelector('input[name=tipo][value=' + salvato.tipo + ']'); if (r) r.checked = true; }
-  form.querySelectorAll('input[name=tipo]').forEach(function(r){ r.addEventListener('change', aggiornaTipo); });
-  aggiornaTipo();
+  var paga = document.getElementById('paga');
 
-  function leggiIntestatario(){
-    var d = {tipo: tipo()};
-    Object.keys(CAMPI).forEach(function(k){ d[k] = document.getElementById(CAMPI[k]).value.trim(); });
-    d.cf = d.cf.toUpperCase().replace(/\s/g, ''); d.provincia = d.provincia.toUpperCase(); d.piva = d.piva.replace(/\s/g, '');
-    d.registro_it = punto_it && regIt.checked; d.whois = punto_it && d.tipo === 'privato' && whois.checked;
-    return d;
-  }
-  // restituisce [id del campo, messaggio] del primo errore, oppure null
-  function controlla(d){
-    var t = d.tipo, serve = function(k){ var el = document.getElementById(CAMPI[k]); return !el.closest('[data-per]') || !el.closest('[data-per]').hidden; };
-    if (serve('nome') && !d.nome) return ['nome', 'Scrivi il nome dell\'intestatario.'];
-    if (serve('cognome') && !d.cognome) return ['cognome', 'Scrivi il cognome dell\'intestatario.'];
-    if (t === 'societa' && !d.ragione) return ['ragione', 'Scrivi la ragione sociale.'];
-    if (serve('cf') && !/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(d.cf)) return ['cf', 'Il codice fiscale ha 16 caratteri, es. RSSMRA80A01F205X.'];
-    if (serve('piva') && !/^[0-9]{11}$/.test(d.piva)) return ['piva', 'La partita IVA ha 11 cifre.'];
-    if (d.indirizzo.length < 5) return ['indirizzo', 'Scrivi via e numero civico.'];
-    if (!/^[0-9]{5}$/.test(d.cap)) return ['cap', 'Il CAP ha 5 cifre.'];
-    if (d.citta.length < 2) return ['citta', 'Scrivi la città.'];
-    if (!/^[A-Z]{2}$/.test(d.provincia)) return ['provincia', 'Scrivi la sigla della provincia, es. MI.'];
-    if (d.telefono.replace(/[^0-9]/g, '').length < 6) return ['telefono', 'Scrivi un numero di telefono.'];
-    return null;
-  }
-  function mostraErrore(k, msg){
-    errInt.textContent = msg; errInt.hidden = false;
-    if (k) { var el = document.getElementById(CAMPI[k]); el.setAttribute('aria-invalid', 'true'); el.focus(); }
-  }
-
+  // 24/11/2026: i dati dell'intestatario del dominio si chiedono dopo il pagamento, nella pagina grazie
   form.addEventListener('submit', function(e){
     e.preventDefault();
     if (!pronto) { manca.hidden = false; manca.scrollIntoView({block: 'center'}); return; }
     var m = email.value.trim();
     if (!m || !email.checkValidity()) { email.setAttribute('aria-invalid', 'true'); errMail.hidden = false; email.focus(); return; }
-    if (RIFAI) {  // «Rifai il tuo sito»: niente intestatario, il dominio resta al cliente
-      o.email_cliente = m; scrivi(o);
-      if (!LINK) return;
-      paga.disabled = true; paga.textContent = 'Un attimo…';
-      location.href = LINK + '?client_reference_id=' + encodeURIComponent(dom.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it';
-      return;
-    }
-    var d = leggiIntestatario(), errore = controlla(d);
-    o.email_cliente = m; o.intestatario = d; scrivi(o);
-    if (errore) { mostraErrore(errore[0], errore[1]); return; }
-    if (!conferma.checked) { mostraErrore(null, 'Spunta la conferma dei dati dell\'intestatario.'); conferma.focus(); return; }
-    if (punto_it && !regIt.checked) { mostraErrore(null, 'Per un dominio .it spunta l\'accettazione delle regole del Registro .it.'); regIt.focus(); return; }
+    o.email_cliente = m; scrivi(o);
     if (!LINK) return;
-    var rif = dom.replace(/\./g, '_');
-    var vai = function(){ location.href = LINK + '?client_reference_id=' + encodeURIComponent(rif) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it'; };
-    var dati = Object.assign({rif: rif, email: m}, d);
     paga.disabled = true; paga.textContent = 'Un attimo…';
-    fetch('/wp-json/sitocomodo/v1/intestatario', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dati)})
-      .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
-      .then(function(x){
-        if (x.ok && x.j && x.j.ok) { vai(); return; }
-        paga.disabled = false; paga.textContent = TESTO_PAGA;
-        mostraErrore(null, (x.j && x.j.errore) || 'Non siamo riusciti a salvare i dati. Riprova tra un attimo.');
-      })
-      .catch(function(){ paga.disabled = false; paga.textContent = TESTO_PAGA; mostraErrore(null, 'Connessione assente: riprova tra un attimo.'); });
+    location.href = LINK + '?client_reference_id=' + encodeURIComponent(dom.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it';
   });
   window.addEventListener('pageshow', function(e){ if (e.persisted || paga.disabled) { paga.disabled = false; paga.textContent = TESTO_PAGA; } });
 })();

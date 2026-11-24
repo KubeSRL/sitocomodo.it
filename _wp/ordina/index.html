@@ -249,7 +249,12 @@ legend{font-size:22px;font-weight:700;margin-bottom:6px;padding:0}
 
   var form = document.getElementById('scegli'), errore = document.getElementById('errore'), o = leggi();
   var q = new URLSearchParams(location.search).get('q');
-  if (q && !o.nome) { o.nome = q.trim().slice(0, 80); scrivi(o); }
+  // 24/11/2026: il nome scritto nella home vince su quello di un ordine lasciato a metà sullo stesso telefono;
+  // poi si toglie dall'indirizzo, così tornando indietro non cancella il nome corretto al passo 2
+  if (q && q.trim()) {
+    o.nome = q.trim().slice(0, 80); scrivi(o);
+    try { history.replaceState(null, '', location.pathname); } catch(e) {}
+  }
   ['modello', 'carattere'].forEach(function(k){
     if (!o[k]) return;
     var r = form.querySelector('input[name=' + k + '][value="' + o[k] + '"]'); if (r) r.checked = true;
