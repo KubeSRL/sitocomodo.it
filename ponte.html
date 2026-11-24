@@ -4,8 +4,8 @@
 <body>ponte
 <script>
 // Passa i video dei reel alla pagina di Meta Business Suite che apre questo frame.
-const BASE = 'https://raw.githubusercontent.com/KubeSRL/sitocomodo.it/2492d6c252aef2f5bd18963480f5a9a0320d6a31/';
-const NOMI = ['SitoComodo-niente-canone.mp4', 'SitoComodo-rifai-due-dita.mp4', 'SitoComodo-rifai-orari.mp4', 'SitoComodo-rifai-benvenuti.mp4'];
+const BASE = 'https://raw.githubusercontent.com/KubeSRL/sitocomodo.it/91b4ad63879b628333fa4a0de217685e50ce944d/';
+const NOMI = ['SitoComodo-vedere-gratis.mp4', 'SitoComodo-acconto-gratis.mp4', 'SitoComodo-divano-gratis.mp4', 'SitoComodo-niente-canone.mp4'];
 window.addEventListener('message', async (e) => {
   if (e.origin !== 'https://business.facebook.com') return;
   if (!e.data || e.data.tipo !== 'chiedi-reel' || !NOMI.includes(e.data.nome)) return;
