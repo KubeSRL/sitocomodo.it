@@ -16,8 +16,17 @@
   try { o = JSON.parse(localStorage.getItem(K) || '{}') || {}; } catch(e) {}
   var q = new URLSearchParams(location.search).get('offerta');
   var m = location.pathname.slice(-8) === '/ordina/' ? (q === 'rifai' ? 'rifai' : 'nuovo') : (q === 'rifai' || q === 'nuovo' ? q : (o.offerta || 'nuovo'));
+  // 24/11/2026: nel sito nuovo il modello lo scegliamo noi, quindi /ordina/ serve solo a «Rifai il tuo sito»;
+  // chi ci arriva per il sito nuovo (link vecchi, inserzioni) passa subito al modulo, con il nome scritto nella home
+  if (m === 'nuovo' && location.pathname.slice(-8) === '/ordina/') {
+    var nome = new URLSearchParams(location.search).get('q');
+    location.replace('../ordine/?offerta=nuovo' + (nome ? '&q=' + encodeURIComponent(nome) : ''));
+    return;
+  }
   if (o.offerta !== m) { o.offerta = m; try { localStorage.setItem(K, JSON.stringify(o)); } catch(e) {} }
   document.documentElement.setAttribute('data-offerta', m);
+  // 24/11/2026: dopo l'anteprima gratis («Lo voglio») si torna su /ordine/?anteprima=<codice> solo per dominio e pagamento
+  if (m !== 'rifai' && /[?&]anteprima=[a-f0-9]{16,40}/.test(location.search)) document.documentElement.setAttribute('data-fase', 'dopo');
   if (m === 'rifai') document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('a[href$="ordina/"]').forEach(function(a){ a.setAttribute('href', a.getAttribute('href') + '?offerta=rifai'); });
   });
@@ -25,6 +34,7 @@
 </script>
 <style>
 html[data-offerta=rifai] .solo-nuovo,html:not([data-offerta=rifai]) .solo-rifai{display:none!important}
+html[data-fase=dopo] .solo-prima,html:not([data-fase=dopo]) .solo-dopo{display:none!important}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
@@ -203,21 +213,21 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <header class="testata"><div>
 <a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
 <ol class="passi" id="passi" aria-label="In 3 passaggi hai il tuo sito">
-<li class="fatto" data-passo="1">1. Scegli il sito</li>
-<li aria-current="step" data-passo="2">2. Logo e attività</li>
-<li data-passo="3"><span class="solo-nuovo">3. Dominio e pagamento</span><span class="solo-rifai">3. Il tuo sito e pagamento</span></li>
+<li class="fatto" data-passo="1" data-passo-nuovo="2"><span class="solo-nuovo">1. La tua attività</span><span class="solo-rifai">1. Scegli il sito</span></li>
+<li aria-current="step" data-passo="2" data-passo-nuovo="2.5"><span class="solo-nuovo">2. Guardalo gratis</span><span class="solo-rifai">2. Logo e attività</span></li>
+<li data-passo="3" data-passo-nuovo="3"><span class="solo-nuovo">3. Dominio e pagamento</span><span class="solo-rifai">3. Il tuo sito e pagamento</span></li>
 </ol>
 </div></header>
-<p class="promemoria solo-nuovo"><span>99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</span></p>
+<p class="promemoria solo-nuovo"><span>Lo vedi gratis prima di pagare. Se ti piace, 99 € IVA inclusa, tutto compreso.</span></p>
 <p class="promemoria solo-rifai"><span>Rifai il tuo sito: 79 € IVA inclusa, sul dominio che hai già. Se non ti piace, lo rifacciamo gratis.</span></p>
 <div class="corpo stretto">
 <main class="scheda" id="passo2">
 <form id="modulo" novalidate>
 <div>
 <h1>Due informazioni sulla tua attività</h1>
-<p class="intro solo-nuovo">Ci servono nome, attività, telefono ed email, più il logo se ce l'hai. I testi li scriviamo noi.</p>
+<p class="intro solo-nuovo">Ci servono nome, attività, città, telefono ed email, più il logo se ce l'hai. I testi li scriviamo noi.</p>
 <p class="intro solo-rifai">Ci servono nome, attività, telefono ed email, più il logo se ce l'hai. I testi li prendiamo dal tuo sito di adesso e li sistemiamo noi.</p>
-<p class="scelta-fatta" id="scelta-fatta"></p>
+<p class="scelta-fatta solo-rifai" id="scelta-fatta"></p>
 </div>
 
 <fieldset>
@@ -231,6 +241,12 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <label for="tipo">Che attività è</label>
 <input id="tipo" name="tipo" type="text" placeholder="Es. pizzeria, idraulico, parrucchiera" aria-describedby="tipo-errore" required maxlength="80">
 <span class="errore-campo" id="tipo-errore" hidden></span>
+</div>
+<div class="campo">
+<label for="citta">Città</label>
+<input id="citta" name="citta" type="text" placeholder="Es. Lecce" aria-describedby="citta-nota citta-errore" required autocomplete="address-level2" maxlength="80">
+<span class="errore-campo" id="citta-errore" hidden></span>
+<span id="citta-nota" class="aiuto">Dove si trova l'attività, o dove lavori.</span>
 </div>
 </fieldset>
 
@@ -331,11 +347,18 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 </details>
 
 <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+<div class="conferma solo-nuovo">
+<input id="diritti-ant" type="checkbox" aria-describedby="diritti-ant-errore">
+<label for="diritti-ant">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</label>
+</div>
+<span class="errore-campo solo-nuovo" id="diritti-ant-errore" hidden>Spunta la conferma per vedere il tuo sito.</span>
+<p class="errore-invio" id="errore-anteprima" role="alert" hidden></p>
 <div class="avanti">
-<button type="submit" class="invia"><span class="solo-nuovo">Continua: scegli il dominio</span><span class="solo-rifai">Continua: il tuo sito di adesso</span></button>
+<button type="submit" class="invia" id="crea"><span class="solo-nuovo">Crea la mia anteprima gratis</span><span class="solo-rifai">Continua: il tuo sito di adesso</span></button>
+<p class="piccolo solo-nuovo">In pochi minuti vedi il tuo sito, già fatto. Paghi solo se ti piace.</p>
 <p class="piccolo">Quello che scrivi resta salvato su questo telefono.</p>
 <p class="aiuto-contatto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Hai un dubbio? <a href="mailto:info@sitocomodo.it">Scrivici a info@sitocomodo.it</a></span></p>
-<a class="indietro" href="../ordina/">Cambia modello o carattere</a>
+<a class="indietro solo-rifai" href="../ordina/">Cambia modello o carattere</a>
 </div>
 </form>
 </main>
@@ -394,18 +417,18 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <dl>
 <div class="solo-nuovo"><dt>SitoComodo</dt><dd>99 €</dd></div>
 <div class="solo-rifai"><dt>Rifai il tuo sito</dt><dd>79 €</dd></div>
-<div><dt>Modello</dt><dd id="riep-modello">—</dd></div>
+<div class="solo-rifai"><dt>Modello</dt><dd id="riep-modello">—</dd></div>
 <div><dt><span class="solo-nuovo">Dominio</span><span class="solo-rifai">Il tuo dominio</span></dt><dd id="dom">—</dd></div>
 <div><dt>Consegna</dt><dd><span class="solo-nuovo">entro 30 minuti dal pagamento</span><span class="solo-rifai">pronto in 30 minuti, poi lo colleghi</span></dd></div>
 <div class="totale"><dt>Totale</dt><dd><span class="solo-nuovo">99 €</span><span class="solo-rifai">79 €</span> <small>IVA inclusa</small></dd></div>
 </dl>
 </div>
 
-<div class="conferma">
+<div class="conferma solo-rifai">
 <input id="diritti" type="checkbox" aria-describedby="diritti-errore">
 <label for="diritti"><span class="solo-nuovo">Confermo che foto, logo e testi sono miei o ho il diritto di usarli.</span><span class="solo-rifai">Confermo che foto, logo e testi, anche quelli del mio sito di adesso, sono miei o ho il diritto di usarli.</span></label>
 </div>
-<span class="errore-campo" id="diritti-errore" hidden>Spunta la conferma per andare al pagamento.</span>
+<span class="errore-campo solo-rifai" id="diritti-errore" hidden>Spunta la conferma per andare al pagamento.</span>
 
 <p class="errore-invio" id="errore-invio" role="alert" hidden></p>
 <div class="avanti">
@@ -427,8 +450,21 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   var o = leggi(), form = document.getElementById('modulo');
   var passo2 = document.getElementById('passo2'), passo3 = document.getElementById('passo3');
   function rifai(){ return document.documentElement.getAttribute('data-offerta') === 'rifai'; }
-  var TESTI = ['nome', 'tipo', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'];
+  var TESTI = ['nome', 'tipo', 'citta', 'chi', 'servizi', 'telefono', 'whatsapp', 'email', 'indirizzo', 'orari', 'colori', 'social', 'google'];
+  // 24/11/2026: dopo l'anteprima gratis («Lo voglio») la pagina serve solo per dominio e pagamento
+  var ANT = (new URLSearchParams(location.search).get('anteprima') || '').toLowerCase();
+  if (!/^[a-f0-9]{16,40}$/.test(ANT)) ANT = '';
+  function dopo(){ return !!ANT && !rifai(); }
+  // 24/11/2026: dalla home si arriva qui con ?q=<nome>: vince su quello di un ordine lasciato a metà sullo stesso telefono,
+  // poi si toglie dall'indirizzo (come faceva /ordina/)
+  var qNome = new URLSearchParams(location.search).get('q');
+  if (qNome && qNome.trim()) {
+    o.nome = qNome.trim().slice(0, 80);
+    try { history.replaceState(null, '', location.pathname + (ANT ? '?anteprima=' + ANT : '')); } catch(e) {}
+  }
   TESTI.forEach(function(k){ var el = document.getElementById(k); if (o[k] && !el.value) el.value = o[k]; });
+  // 24/11/2026, scelta di Giuseppe: nel sito nuovo modello e carattere li sceglie la fabbrica in base all'attività
+  if (!rifai()) { o.modello = 'nostro'; o.modello_nome = 'Lo scegliamo noi'; o.carattere = 'nostro'; o.carattere_nome = 'Lo scegliamo noi'; }
   if (!o.modello) { o.modello = 'nostro'; o.modello_nome = 'Lo scegliamo noi'; }
   if (!o.carattere) { o.carattere = 'nostro'; o.carattere_nome = 'Lo scegliamo noi'; }
   scrivi(o);
@@ -482,6 +518,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   var MESSAGGI = {
     nome: {vuoto: 'Scrivi il nome della tua attività.'},
     tipo: {vuoto: 'Scrivi che attività è, per esempio «parrucchiera».'},
+    citta: {vuoto: 'Scrivi la città, per esempio «Lecce».'},
     telefono: {vuoto: 'Scrivi il numero di telefono.', sbagliato: 'Controlla il numero: servono almeno 6 cifre.'},
     email: {vuoto: 'Scrivi la tua email.', sbagliato: 'Controlla l’email: manca qualcosa, per esempio la @.'}
   };
@@ -506,13 +543,17 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 
   // ---- passaggi 2 e 3 nella stessa pagina: i file restano nel modulo
   var passi = document.getElementById('passi');
-  function mostra(n){
-    passo2.hidden = n !== 2; passo3.hidden = n !== 3;
+  function segnaPassi(n){
     passi.querySelectorAll('li').forEach(function(li){
-      var k = +li.getAttribute('data-passo');
+      var k = +li.getAttribute(rifai() ? 'data-passo' : 'data-passo-nuovo');
       if (k === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
       li.classList.toggle('fatto', k < n);
     });
+  }
+  segnaPassi(2);
+  function mostra(n){
+    passo2.hidden = n !== 2; passo3.hidden = n !== 3;
+    segnaPassi(n);
     document.title = n === 3 ? (rifai() ? 'Il tuo sito di adesso – SitoComodo' : 'Scegli il dominio – SitoComodo') : 'Logo e la tua attività – SitoComodo';
     window.scrollTo(0, 0);
     if (n === 3 && rifai()) {
@@ -526,9 +567,9 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     }
   }
   function datiPronti(){ return logo.files.length > 0 || logoDopo.checked; }
-  window.addEventListener('popstate', function(){ mostra(location.hash === '#dominio' && datiPronti() ? 3 : 2); });
+  window.addEventListener('popstate', function(){ if (dopo()) return; mostra(location.hash === '#dominio' && datiPronti() ? 3 : 2); });
   if (location.hash === '#dominio') history.replaceState(null, '', location.pathname + location.search);
-  document.getElementById('torna').addEventListener('click', function(e){ e.preventDefault(); history.back(); });
+  document.getElementById('torna').addEventListener('click', function(e){ e.preventDefault(); if (dopo()) location.href = '/anteprima/' + ANT + '/'; else history.back(); });
 
   form.addEventListener('submit', function(e){
     e.preventDefault();
@@ -555,6 +596,7 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     d.foto = foto.files.length; d.logo_dopo = !logo.files.length && logoDopo.checked; d.quando = Date.now();
     scrivi(d);
     if (window.scTappa) window.scTappa('dati');  // pannello Live, anonimo
+    if (!rifai()) { inviaAnteprima(d); return; }   // 24/11/2026: sito nuovo → anteprima gratis, il dominio dopo
     history.pushState(null, '', '#dominio');
     mostra(3);
   });
@@ -728,7 +770,8 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     }
     if (!rifai() && !sel) { input.focus(); return; }
     if (window.scTappa) window.scTappa('paga');
-    if (!diritti.checked) {
+    if (dopo()) { dominioAnteprima(sel); return; }
+    if (rifai() && !diritti.checked) {
       dirittiErrore.hidden = false; diritti.setAttribute('aria-invalid', 'true');
       diritti.focus({preventScroll: true}); diritti.closest('.conferma').scrollIntoView({behavior: 'smooth', block: 'center'});
       return;
@@ -764,6 +807,68 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
     if (!i) { i = document.createElement('input'); i.type = 'hidden'; i.name = nome; form.appendChild(i); }
     i.value = valore;
   }
+  // ---- 24/11/2026: anteprima gratis. Il modulo parte senza dominio; WordPress porta su /anteprima/<codice>/
+  var dirittiAnt = document.getElementById('diritti-ant'), dirittiAntErr = document.getElementById('diritti-ant-errore');
+  var crea = document.getElementById('crea'), erroreAnt = document.getElementById('errore-anteprima');
+  dirittiAnt.addEventListener('change', function(){ if (dirittiAnt.checked) { dirittiAntErr.hidden = true; dirittiAnt.removeAttribute('aria-invalid'); } });
+  function inviaAnteprima(d){
+    if (!dirittiAnt.checked) {
+      dirittiAntErr.hidden = false; dirittiAnt.setAttribute('aria-invalid', 'true');
+      dirittiAnt.focus({preventScroll: true}); dirittiAnt.closest('.conferma').scrollIntoView({behavior: 'smooth', block: 'center'});
+      return;
+    }
+    if (!INVIO) return;
+    if (window.scTappa) window.scTappa('anteprima');
+    var testo = crea.innerHTML;
+    crea.disabled = true; crea.textContent = 'Carico i file…'; erroreAnt.hidden = true;
+    var gruppi = [[document.getElementById('foto'), false], [logo, true], [document.getElementById('foto-telefono'), false]];
+    Promise.all(gruppi.map(function(g){ return Promise.all(Array.prototype.map.call(g[0].files, function(f){ return rimpicciolisci(f, g[1]); })); }))
+    .then(function(liste){
+      var peso = 0;
+      liste.forEach(function(l, k){ sostituisci(gruppi[k][0], l); l.forEach(function(f){ peso += f.size; }); });
+      if (peso > MAX) {
+        erroreAnt.textContent = 'Le foto pesano troppo per inviarle tutte insieme. Scegline qualcuna in meno, oppure foto più leggere.';
+        erroreAnt.hidden = false; crea.disabled = false; crea.innerHTML = testo; return;
+      }
+      nascosto('anteprima', '1'); nascosto('offerta', 'nuovo'); nascosto('diritti', '1');
+      nascosto('modello', d.modello); nascosto('modello_scelto', d.modello_nome);
+      nascosto('carattere', d.carattere); nascosto('carattere_scelto', d.carattere_nome);
+      crea.textContent = 'Preparo il tuo sito…';
+      form.action = DESTINO; form.method = 'POST'; form.enctype = 'multipart/form-data';
+      HTMLFormElement.prototype.submit.call(form);
+    }).catch(function(){
+      erroreAnt.textContent = 'Non siamo riusciti a preparare le foto. Riprova, oppure scrivici a info@sitocomodo.it.';
+      erroreAnt.hidden = false; crea.disabled = false; crea.innerHTML = testo;
+    });
+  }
+  window.addEventListener('pageshow', function(e){ if (e.persisted && crea.disabled) { crea.disabled = false; location.reload(); } });
+
+  // dopo l'anteprima: il dominio scelto diventa l'ordine (i dati e le foto li ha già WordPress), poi la cassa
+  function dominioAnteprima(dom){
+    var testo = vai.textContent;
+    vai.disabled = true; vai.textContent = 'Un attimo…'; erroreInvio.hidden = true;
+    fetch('/wp-json/sitocomodo/v1/anteprima-dominio', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codice: ANT, dominio: dom})})
+      .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
+      .then(function(x){
+        if (x.ok && x.j && x.j.ok) {
+          var o2 = leggi();
+          ['nome', 'tipo', 'email', 'telefono'].forEach(function(k){ if (x.j[k]) o2[k] = x.j[k]; });
+          if (x.j.modello) { o2.modello = x.j.modello; o2.modello_nome = x.j.modello_nome || (x.j.modello === 'nostro' ? 'Lo scegliamo noi' : o2.modello_nome); }
+          if (x.j.carattere) { o2.carattere = x.j.carattere; o2.carattere_nome = x.j.carattere_nome || (x.j.carattere === 'nostro' ? 'Lo scegliamo noi' : o2.carattere_nome); }
+          o2.dominio = dom; o2.offerta = 'nuovo'; o2.anteprima = ANT; scrivi(o2);
+          location.href = '../checkout/';
+          return;
+        }
+        vai.disabled = false; vai.textContent = testo;
+        erroreInvio.textContent = (x.j && x.j.errore) || 'Non siamo riusciti a salvare il dominio. Riprova tra un attimo.'; erroreInvio.hidden = false;
+      })
+      .catch(function(){ vai.disabled = false; vai.textContent = testo; erroreInvio.textContent = 'Connessione assente: riprova tra un attimo.'; erroreInvio.hidden = false; });
+  }
+  if (dopo()) {
+    document.getElementById('torna').textContent = 'Torna all’anteprima';
+    mostra(3);
+  }
+
   function invia(d){
     var testo = vai.textContent;
     vai.disabled = true; vai.textContent = 'Carico i file…'; erroreInvio.hidden = true;

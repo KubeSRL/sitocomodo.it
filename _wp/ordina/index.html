@@ -16,8 +16,17 @@
   try { o = JSON.parse(localStorage.getItem(K) || '{}') || {}; } catch(e) {}
   var q = new URLSearchParams(location.search).get('offerta');
   var m = location.pathname.slice(-8) === '/ordina/' ? (q === 'rifai' ? 'rifai' : 'nuovo') : (q === 'rifai' || q === 'nuovo' ? q : (o.offerta || 'nuovo'));
+  // 24/11/2026: nel sito nuovo il modello lo scegliamo noi, quindi /ordina/ serve solo a «Rifai il tuo sito»;
+  // chi ci arriva per il sito nuovo (link vecchi, inserzioni) passa subito al modulo, con il nome scritto nella home
+  if (m === 'nuovo' && location.pathname.slice(-8) === '/ordina/') {
+    var nome = new URLSearchParams(location.search).get('q');
+    location.replace('../ordine/?offerta=nuovo' + (nome ? '&q=' + encodeURIComponent(nome) : ''));
+    return;
+  }
   if (o.offerta !== m) { o.offerta = m; try { localStorage.setItem(K, JSON.stringify(o)); } catch(e) {} }
   document.documentElement.setAttribute('data-offerta', m);
+  // 24/11/2026: dopo l'anteprima gratis («Lo voglio») si torna su /ordine/?anteprima=<codice> solo per dominio e pagamento
+  if (m !== 'rifai' && /[?&]anteprima=[a-f0-9]{16,40}/.test(location.search)) document.documentElement.setAttribute('data-fase', 'dopo');
   if (m === 'rifai') document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('a[href$="ordina/"]').forEach(function(a){ a.setAttribute('href', a.getAttribute('href') + '?offerta=rifai'); });
   });
@@ -25,6 +34,7 @@
 </script>
 <style>
 html[data-offerta=rifai] .solo-nuovo,html:not([data-offerta=rifai]) .solo-rifai{display:none!important}
+html[data-fase=dopo] .solo-prima,html:not([data-fase=dopo]) .solo-dopo{display:none!important}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
@@ -131,18 +141,18 @@ legend{font-size:22px;font-weight:700;margin-bottom:6px;padding:0}
 <header class="testata"><div>
 <a class="marchio" href="../"><svg width="50" height="36" viewBox="0 0 50 36" aria-hidden="true"><rect x="6" y="13" width="38" height="15" rx="6" fill="#F97316" stroke="#111827" stroke-width="2.5"></rect><rect x="1.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="38.5" y="19" width="10" height="15" rx="5" fill="#EA580C" stroke="#111827" stroke-width="2.5"></rect><rect x="10" y="25" width="30" height="8" rx="3" fill="#FDBA74" stroke="#111827" stroke-width="2.5"></rect><g transform="rotate(-10 25 16)"><rect x="14.5" y="4" width="21" height="21" rx="3.5" fill="#FFFFFF" stroke="#111827" stroke-width="2.3"></rect><line x1="14.5" y1="9.5" x2="35.5" y2="9.5" stroke="#111827" stroke-width="2"></line><circle cx="18" cy="6.8" r="1" fill="#F97316"></circle><circle cx="21" cy="6.8" r="1" fill="#FACC15"></circle><circle cx="22" cy="15" r="1.2" fill="#111827"></circle><circle cx="28" cy="15" r="1.2" fill="#111827"></circle><path d="M21.5 19 q3.5 3.2 7 0" stroke="#111827" stroke-width="1.9" fill="none" stroke-linecap="round"></path></g></svg><span>Sito<span>Comodo</span></span></a>
 <ol class="passi" id="passi" aria-label="In 3 passaggi hai il tuo sito">
-<li aria-current="step" data-passo="1">1. Scegli il sito</li>
-<li data-passo="2">2. Logo e attività</li>
-<li data-passo="3"><span class="solo-nuovo">3. Dominio e pagamento</span><span class="solo-rifai">3. Il tuo sito e pagamento</span></li>
+<li aria-current="step" data-passo="1" data-passo-nuovo="2"><span class="solo-nuovo">1. La tua attività</span><span class="solo-rifai">1. Scegli il sito</span></li>
+<li data-passo="2" data-passo-nuovo="2.5"><span class="solo-nuovo">2. Guardalo gratis</span><span class="solo-rifai">2. Logo e attività</span></li>
+<li data-passo="3" data-passo-nuovo="3"><span class="solo-nuovo">3. Dominio e pagamento</span><span class="solo-rifai">3. Il tuo sito e pagamento</span></li>
 </ol>
 </div></header>
 <div class="corpo">
 <main class="scheda">
 <div>
 <h1>Scegli come sarà il tuo sito</h1>
-<p class="intro solo-nuovo">In 3 passaggi hai il tuo sito: scegli il modello, mandaci il logo e due informazioni sulla tua attività, prendi il dominio e paghi. Ci vogliono 5 minuti.</p>
+<p class="intro solo-nuovo">Scegli il modello, raccontaci la tua attività e in pochi minuti vedi il tuo sito, già fatto. Se ti piace, scegli il dominio e lo metti online.</p>
 <p class="intro solo-rifai">In 3 passaggi hai il sito nuovo: scegli il modello, mandaci il logo e due informazioni sulla tua attività, dicci dov'è il sito di adesso e paghi. Ci vogliono 5 minuti.</p>
-<p class="offerta solo-nuovo">Sito vetrina a 99 € IVA inclusa, tutto compreso. Se non ti piace, lo rifacciamo gratis.</p>
+<p class="offerta solo-nuovo">Lo vedi gratis prima di pagare. Se ti piace, 99 € IVA inclusa, tutto compreso.</p>
 <p class="offerta solo-rifai">Rifai il tuo sito a 79 € IVA inclusa, sul dominio che hai già. Se non ti piace, lo rifacciamo gratis.</p>
 </div>
 <form id="scegli" novalidate>

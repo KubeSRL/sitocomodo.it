@@ -19,6 +19,15 @@
       if (carrello) return; carrello = true;
       fbq('track', 'AddToCart', {value: 99, currency: 'EUR', content_name: 'Sito vetrina'});
     });
+    // 24/11/2026: anteprima gratis chiesta (pagina d'attesa /anteprima/<codice>/): un Lead per anteprima
+    var ant = p.match(/^\/anteprima\/([a-f0-9]{16,40})\/?$/);
+    if (ant && document.documentElement.getAttribute('data-sc-lead') === '1') {
+      var gia = []; try { gia = JSON.parse(localStorage.getItem('sitocomodo_lead') || '[]'); } catch(e) {}
+      if (gia.indexOf(ant[1]) < 0) {
+        fbq('track', 'Lead', {content_name: 'Anteprima gratis'}, {eventID: 'ant-' + ant[1]});
+        gia.push(ant[1]); try { localStorage.setItem('sitocomodo_lead', JSON.stringify(gia.slice(-20))); } catch(e) {}
+      }
+    }
     if (/\/checkout\/?$/.test(p)) fbq('track', 'InitiateCheckout', {value: 99, currency: 'EUR', content_name: 'Sito vetrina'});
     if (/\/grazie\/?$/.test(p)) {
       var sid = new URLSearchParams(location.search).get('session_id');

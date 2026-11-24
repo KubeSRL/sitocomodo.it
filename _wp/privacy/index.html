@@ -16,8 +16,17 @@
   try { o = JSON.parse(localStorage.getItem(K) || '{}') || {}; } catch(e) {}
   var q = new URLSearchParams(location.search).get('offerta');
   var m = location.pathname.slice(-8) === '/ordina/' ? (q === 'rifai' ? 'rifai' : 'nuovo') : (q === 'rifai' || q === 'nuovo' ? q : (o.offerta || 'nuovo'));
+  // 24/11/2026: nel sito nuovo il modello lo scegliamo noi, quindi /ordina/ serve solo a «Rifai il tuo sito»;
+  // chi ci arriva per il sito nuovo (link vecchi, inserzioni) passa subito al modulo, con il nome scritto nella home
+  if (m === 'nuovo' && location.pathname.slice(-8) === '/ordina/') {
+    var nome = new URLSearchParams(location.search).get('q');
+    location.replace('../ordine/?offerta=nuovo' + (nome ? '&q=' + encodeURIComponent(nome) : ''));
+    return;
+  }
   if (o.offerta !== m) { o.offerta = m; try { localStorage.setItem(K, JSON.stringify(o)); } catch(e) {} }
   document.documentElement.setAttribute('data-offerta', m);
+  // 24/11/2026: dopo l'anteprima gratis («Lo voglio») si torna su /ordine/?anteprima=<codice> solo per dominio e pagamento
+  if (m !== 'rifai' && /[?&]anteprima=[a-f0-9]{16,40}/.test(location.search)) document.documentElement.setAttribute('data-fase', 'dopo');
   if (m === 'rifai') document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('a[href$="ordina/"]').forEach(function(a){ a.setAttribute('href', a.getAttribute('href') + '?offerta=rifai'); });
   });
@@ -25,6 +34,7 @@
 </script>
 <style>
 html[data-offerta=rifai] .solo-nuovo,html:not([data-offerta=rifai]) .solo-rifai{display:none!important}
+html[data-fase=dopo] .solo-prima,html:not([data-fase=dopo]) .solo-dopo{display:none!important}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-500-normal.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Inter";src:url("../fonts/inter-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
