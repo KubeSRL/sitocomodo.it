@@ -10,11 +10,11 @@ Contatti: info@sitocomodo.it
 ## Domande frequenti
 
 - Cos'è un sito vetrina? È un sito di poche pagine che presenta la tua attività: chi sei, cosa offri, prezzi, orari, dove sei e come contattarti. Non vende online come un e-commerce: serve a farti trovare su Google e a farti chiamare o scrivere su WhatsApp.
-- Quanto costa un sito vetrina con SitoComodo? 99 € IVA inclusa. Dentro ci sono il sito fino a 3 pagine (home, servizi e contatti), i testi scritti per te, il dominio a tuo nome e l'hosting per il primo anno. Dal secondo anno paghi solo il rinnovo di dominio e hosting: 29 € + IVA all'anno.
-- Il mio sito si troverà su Google? Ogni sito nasce pronto per Google: titoli e descrizioni curati, mappa del sito, indirizzo, orari e servizi scritti nel modo che Google legge, foto leggere che si aprono in fretta anche dal telefono. Per le ricerche nella tua zona conta molto anche la scheda Google della tua attività: se ce l'hai, la colleghiamo al sito. Prima di consegnarlo lo controlliamo con Lighthouse, lo strumento di Google per la qualità dei siti: i nostri modelli prendono 100 su 100 nella SEO.
-- Posso vedere qualche esempio? Sì: qui sopra trovi cinque modelli veri, da aprire anche dal telefono. Il tuo avrà le tue foto, i tuoi testi, il tuo colore e il carattere che scegli tra tre.
-- Devo alzarmi dal divano? Solo per fare due foto alla tua attività. Poi puoi tornare giù: al resto pensiamo noi.
-- Cosa devo fare io? Tre passaggi: scegli il modello, ci mandi il logo e due informazioni, scegli il dominio e paghi. Ci vogliono 5 minuti, meno di quanti ne servono per scegliere un film la sera.
+- Quanto costa un sito vetrina con SitoComodo? 99 € IVA inclusa. Dentro ci sono il sito di 3 pagine (home, servizi e contatti), i testi scritti per te, il dominio a tuo nome e l'hosting per il primo anno. Dal secondo anno paghi solo il rinnovo di dominio e hosting: 29 € + IVA all'anno.
+- Il mio sito si troverà su Google? Ogni sito nasce pronto per Google: titoli e descrizioni curati, mappa del sito, indirizzo, orari e servizi scritti nel modo che Google legge, foto leggere che si aprono in fretta anche dal telefono. Per le ricerche nella tua zona conta molto anche la scheda Google della tua attività: se ce l'hai, la colleghiamo al sito. Sono costruiti seguendo Lighthouse, lo strumento di Google per la qualità dei siti: nella SEO prendono 100 su 100.
+- Posso vedere qualche esempio? Sì: qui sopra trovi cinque siti di esempio, da aprire anche dal telefono. Il tuo lo impaginiamo noi in base alla tua attività, con le tue foto, i tuoi testi e il tuo colore. E prima di pagare lo vedi gratis.
+- Devo saperne qualcosa di siti? No. Ci servono solo le informazioni sulla tua attività e, se vuoi, qualche foto. Dominio, hosting, sicurezza e Google sono lavoro nostro.
+- Cosa devo fare io? Raccontarci la tua attività: nome, città, telefono, email e il logo se ce l'hai. In pochi minuti vedi il sito gratis; se ti piace scegli il dominio e paghi. Ci vogliono 5 minuti.
 - Davvero in 30 minuti? Sì, sempre: anche la sera e nel weekend. I 30 minuti partono dal pagamento, e il sito va online su un indirizzo provvisorio. Sul tuo dominio arriva appena il registro lo attiva: di solito da pochi minuti a qualche ora.
 - Ricevo tutte le credenziali? Sì. Appena il sito è online ti mandiamo per email l'accesso al sito e tutte le informazioni su dominio e hosting.
 - Ho scelto un .it: perché mi arriva un'email? Il Registro .it chiede di confermare l'email di chi intesta il dominio. Clicca il link: intanto il tuo sito è già online su un indirizzo provvisorio.
@@ -26,3 +26,4 @@ Contatti: info@sitocomodo.it
 
 - [Home](https://sitocomodo.it/): offerta, cosa c'è dentro, prezzo, esempi e domande frequenti
 - [Rifai il tuo sito](https://sitocomodo.it/rifai-il-tuo-sito/): per chi ha già un sito vecchio, rifatto a 79 € IVA inclusa sul dominio che ha già (email intatta, SEO del sito vecchio ripresa), hosting 19 € + IVA all'anno dal secondo anno
+- [Chi siamo](https://sitocomodo.it/chi-siamo/): perché esiste SitoComodo e in cosa crediamo (prezzo detto subito, dominio intestato al cliente, prima lo vedi poi decidi)
