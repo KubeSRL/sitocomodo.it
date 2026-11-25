@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ponte</title>
+<body>ponte
+<script>
+// Passa i video delle inserzioni alla pagina di Gestione inserzioni di Meta che apre questo frame.
+const BASE = 'https://raw.githubusercontent.com/KubeSRL/sitocomodo.it/dc091d20d63a9343513c3a4afb9e24f59d815562/';
+const NOMI = ['SitoComodo-vedere-gratis-jingle.mp4', 'SitoComodo-acconto-gratis-jingle.mp4', 'SitoComodo-divano-gratis-jingle.mp4'];
+const ORIGINE = 'https://adsmanager.facebook.com';
+window.addEventListener('message', async (e) => {
+  if (e.origin !== ORIGINE) return;
+  if (!e.data || e.data.tipo !== 'chiedi-reel' || !NOMI.includes(e.data.nome)) return;
+  try {
+    const r = await fetch(BASE + e.data.nome);
+    const blob = await r.blob();
+    parent.postMessage({tipo: 'reel-file', nome: e.data.nome, status: r.status, blob}, ORIGINE);
+  } catch (err) {
+    parent.postMessage({tipo: 'reel-errore', nome: e.data.nome, msg: String(err)}, ORIGINE);
+  }
+});
+parent.postMessage({tipo: 'ponte-pronto'}, ORIGINE);
+</script>
