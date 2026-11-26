@@ -232,6 +232,28 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
   var RIFAI = document.documentElement.getAttribute('data-offerta') === 'rifai';
   var LINK = RIFAI ? "https://buy.stripe.com/4gM9AUchA8ejfQO6284Rq01" : "https://buy.stripe.com/9B6aEY5TcfGL1ZY6284Rq00", TESTO_PAGA = RIFAI ? 'Paga 79,00 €' : 'Paga 99,00 €';
 
+  // 26/11/2026: sconto dell'email a chi ha lasciato il carrello. /riprendi/<token>/ lo salva qui fino alla scadenza;
+  // il codice va a Stripe con prefilled_promo_code e Stripe applica lo sconto.
+  var SCONTO = null;
+  try { SCONTO = JSON.parse(localStorage.getItem('sitocomodo_sconto') || 'null'); } catch(e) {}
+  if (!SCONTO || !SCONTO.codice || !(SCONTO.scade > Date.now()) || !(SCONTO.percento > 0)) SCONTO = null;
+  function cifra(c){ return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
+  if (SCONTO) (function(){
+    var pieno = RIFAI ? 7900 : 9900, via = Math.round(pieno * SCONTO.percento / 100), quale = RIFAI ? '.solo-rifai' : '.solo-nuovo';
+    TESTO_PAGA = 'Paga ' + cifra(pieno - via);
+    document.getElementById('paga').textContent = TESTO_PAGA;
+    [].forEach.call(document.querySelectorAll('.apri-riepilogo strong ' + quale + ', .totale ' + quale), function(x){ x.textContent = cifra(pieno - via); });
+    var righe = document.querySelector('.righe'), riga = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
+    dt.textContent = 'Sconto ' + SCONTO.percento + '%'; dd.textContent = '−' + cifra(via); riga.appendChild(dt); riga.appendChild(dd);
+    righe.insertBefore(riga, righe.children[1] || null);
+    var nota = document.createElement('p'), b = document.createElement('strong');
+    nota.className = 'nota-campo'; nota.id = 'nota-sconto';
+    b.textContent = 'Sconto del ' + SCONTO.percento + '% applicato. ';
+    nota.appendChild(b);
+    nota.appendChild(document.createTextNode('Vale fino a ' + new Date(SCONTO.scade).toLocaleString('it-IT', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'}) + '.'));
+    var paga = document.getElementById('paga'); paga.parentNode.insertBefore(nota, paga);
+  })();
+
   function leggi(){ try { return JSON.parse(localStorage.getItem('sitocomodo_ordine') || '{}'); } catch(e) { return {}; } }
   function scrivi(o){ try { localStorage.setItem('sitocomodo_ordine', JSON.stringify(o)); } catch(e) {} }
   function pulito(d){ return (d || '').toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 70); }
@@ -269,7 +291,7 @@ h2{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:600}
     o.email_cliente = m; scrivi(o);
     if (!LINK) return;
     paga.disabled = true; paga.textContent = 'Un attimo…';
-    location.href = LINK + '?client_reference_id=' + encodeURIComponent(dom.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it';
+    location.href = LINK + '?client_reference_id=' + encodeURIComponent(dom.replace(/\./g, '_')) + '&prefilled_email=' + encodeURIComponent(m) + '&locale=it' + (SCONTO ? '&prefilled_promo_code=' + encodeURIComponent(SCONTO.codice) : '');
   });
   window.addEventListener('pageshow', function(e){ if (e.persisted || paga.disabled) { paga.disabled = false; paga.textContent = TESTO_PAGA; } });
 })();

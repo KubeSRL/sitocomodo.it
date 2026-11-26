@@ -63,6 +63,12 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
 .scheda{flex:999 1 560px;min-width:0;background:#FFFFFF;border:2px solid #111827;border-radius:28px;padding:40px;display:flex;flex-direction:column;gap:28px}
 h1{margin:0 0 10px;font-size:clamp(32px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em}
 .intro{margin:0;font-size:18px;line-height:1.55;color:#374151}
+/* 27/11/2026: siti d'esempio in cima al modulo, per chi arriva dall'inserzione */
+.vetrina{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:520px;margin:22px 0 0;padding:0 4px 4px 0;list-style:none}
+.vetrina img{display:block;width:100%;height:auto;aspect-ratio:5/8;object-fit:cover;object-position:top;background:#EEF4FF;border:2px solid #111827;border-radius:14px;box-shadow:3px 3px 0 #111827}
+.vetrina span{display:block;margin-top:9px;font-size:13px;font-weight:600;line-height:1.3;color:#374151;text-align:center}
+.vetrina-nota{margin:14px 0 0;font-size:15px;line-height:1.5;color:#374151}
+@media (max-width:420px){.vetrina{gap:10px}.vetrina img{border-radius:12px}}
 .offerta{display:inline-block;margin:4px 0 16px;padding:8px 14px;background:#FEF3C7;border:2px solid #111827;border-radius:12px;font-weight:700;font-size:17px;line-height:1.45;color:#111827}
 .corpo.stretto{max-width:860px}
 .corpo.stretto>.scheda{flex-basis:100%}
@@ -224,8 +230,14 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
 <main class="scheda" id="passo2">
 <form id="modulo" novalidate>
 <div>
-<h1>Due informazioni sulla tua attività</h1>
-<p class="intro solo-nuovo">Ci servono nome, attività, città, telefono ed email, più il logo se ce l'hai. I testi li scriviamo noi.</p>
+<h1><span class="solo-nuovo">Il tuo sito, tra pochi minuti</span><span class="solo-rifai">Due informazioni sulla tua attività</span></h1>
+<p class="intro solo-nuovo">Ci dici chi sei e lo facciamo noi, testi compresi. Lo guardi gratis, sul tuo telefono.</p>
+<ul class="vetrina solo-nuovo" aria-label="Tre siti d'esempio fatti da noi">
+<li><img src="esempi/pizzeria.jpg" width="300" height="600" alt="Sito d'esempio di una pizzeria, visto da telefono" decoding="async"><span>Pizzeria</span></li>
+<li><img src="esempi/parrucchiere.jpg" width="300" height="600" alt="Sito d'esempio di un parrucchiere, visto da telefono" decoding="async"><span>Parrucchiere</span></li>
+<li><img src="esempi/idraulico.jpg" width="300" height="600" alt="Sito d'esempio di un idraulico, visto da telefono" decoding="async"><span>Idraulico</span></li>
+</ul>
+<p class="vetrina-nota solo-nuovo">Tre siti d'esempio fatti da noi. Per vedere il tuo ci vuole un minuto: compila qui sotto.</p>
 <p class="intro solo-rifai">Ci servono nome, attività, telefono ed email, più il logo se ce l'hai. I testi li prendiamo dal tuo sito di adesso e li sistemiamo noi.</p>
 <p class="scelta-fatta solo-rifai" id="scelta-fatta"></p>
 </div>
@@ -899,6 +911,22 @@ legend{font-size:22px;font-weight:700;margin-bottom:16px;padding:0}
   }
   window.addEventListener('pageshow', function(){ vai.disabled = false; aggiorna(); });
   aggiorna();
+})();
+</script>
+<script>
+/* 26/11/2026: sconto dell'email a chi ha lasciato il carrello (salvato da /riprendi/<token>/): si vede anche nel riepilogo */
+(function(){
+  var S = null;
+  try { S = JSON.parse(localStorage.getItem('sitocomodo_sconto') || 'null'); } catch(e) {}
+  if (!S || !S.codice || !(S.scade > Date.now()) || !(S.percento > 0)) return;
+  var rifai = document.documentElement.getAttribute('data-offerta') === 'rifai', pieno = rifai ? 7900 : 9900, via = Math.round(pieno * S.percento / 100);
+  function cifra(c){ return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
+  var box = document.getElementById('riepilogo'); if (!box) return;
+  var tot = box.querySelector('.totale'), dl = tot && tot.parentNode; if (!dl) return;
+  var riga = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
+  dt.textContent = 'Sconto ' + S.percento + '%'; dd.textContent = '−' + cifra(via); riga.appendChild(dt); riga.appendChild(dd);
+  dl.insertBefore(riga, tot);
+  [].forEach.call(tot.querySelectorAll(rifai ? '.solo-rifai' : '.solo-nuovo'), function(x){ x.textContent = cifra(pieno - via); });
 })();
 </script>
 <script src="/consenso.js" defer></script>

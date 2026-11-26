@@ -25,6 +25,8 @@
       var gia = []; try { gia = JSON.parse(localStorage.getItem('sitocomodo_lead') || '[]'); } catch(e) {}
       if (gia.indexOf(ant[1]) < 0) {
         fbq('track', 'Lead', {content_name: 'Anteprima gratis'}, {eventID: 'ant-' + ant[1]});
+        // 27/11/2026: le inserzioni ottimizzano su «Avvio della prova» (in una campagna Vendite «Lead» non si può scegliere)
+        fbq('track', 'StartTrial', {content_name: 'Anteprima gratis'}, {eventID: 'prova-' + ant[1]});
         gia.push(ant[1]); try { localStorage.setItem('sitocomodo_lead', JSON.stringify(gia.slice(-20))); } catch(e) {}
       }
     }

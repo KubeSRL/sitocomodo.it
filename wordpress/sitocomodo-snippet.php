@@ -2101,7 +2101,7 @@ function sc_anteprima_pagina($titolo, $corpo, $codice = '', $aspetta = false) {
         . 'animation:g 1s linear infinite;margin-bottom:16px}@keyframes g{to{transform:rotate(360deg)}}'
         . '@media (prefers-reduced-motion:reduce){.rotella{animation:none}}a{color:#1D4ED8}</style></head><body><main>'
         . '<a class="marchio" href="/"><img src="/apple-touch-icon.png" width="36" height="36" alt="" style="border-radius:9px">SitoComodo</a>'
-        . '<div class="scheda">' . $corpo . '</div></main><script src="/consenso.js" defer></script>' . $script . '</body></html>';
+        . '<div class="scheda">' . $corpo . '</div></main><script src="/consenso.js?v=2711" defer></script>' . $script . '</body></html>';
 }
 
 function sc_anteprima_servi($codice, $resto) {
@@ -2221,7 +2221,7 @@ function sc_anteprima_barra($a, $lo_voglio) {
     $html = '<div id="sc-barra" role="region" aria-label="Anteprima di SitoComodo">'
         . '<div class="sc-info"><b>Anteprima<span class="sc-lungo"> gratis</span></b><span id="sc-resta">ancora ' . SC_ANTEPRIMA_MINUTI . ':00</span></div>'
         . '<button type="button" class="sc-mod-btn" id="sc-apri-mod">Modifica</button>'
-        . '<a class="sc-voglio" href="' . esc_attr($lo_voglio) . '">Lo voglio · 99 €</a></div>'
+        . '<a class="sc-voglio" href="' . esc_attr($lo_voglio) . '">Lo voglio · ' . esc_html(sc_anteprima_prezzo($a)) . '</a></div>'
         . '<div id="sc-avviso" role="status" aria-live="polite"></div>'
         . '<div id="sc-mod" role="dialog" aria-modal="true" aria-labelledby="sc-mod-t"><div class="sc-pann">'
         . '<h2 id="sc-mod-t">Cosa vuoi cambiare?</h2><p id="sc-mod-p">Scrivilo come lo diresti a voce, per esempio «metti il verde al posto del blu» o «togli il servizio consegne». '
@@ -2290,4 +2290,358 @@ function sc_pagina_anteprime() {
             . '<td><a href="' . esc_url(sc_anteprima_url($a['codice'])) . '" target="_blank" rel="noopener">apri</a></td></tr>';
     }
     echo '</tbody></table></div>';
+}
+
+// ---------------------------------------------------------------- 7. Email a chi lascia il carrello: 10% di sconto per 48 ore
+// 26/11/2026, richiesta di Giuseppe. Resta spenta finché sc_recupero_attivo non vale '1' (la accende /recupero-stato).
+// Riguarda solo i carrelli nati dopo l'accensione (sc_recupero_dal): anteprime pronte e mai messe online, ordini fermi prima
+// del pagamento. Parte SC_RECUPERO_ORE ore dopo l'ultimo passo, tra le 9 e le 20, una sola volta per indirizzo email.
+// Lo sconto è il codice promozionale Stripe SC_SCONTO_CODICE: il bottone dell'email passa da /riprendi/<token>/, che lo salva
+// sul telefono del cliente fino alla scadenza; la cassa lo aggiunge al link di pagamento (prefilled_promo_code).
+// Il webhook controlla l'importo prima degli sconti (amount_subtotal), quindi un ordine scontato passa come gli altri.
+if (!defined('SC_SCONTO_CODICE')) define('SC_SCONTO_CODICE', 'COMODO10');
+if (!defined('SC_SCONTO_PERCENTO')) define('SC_SCONTO_PERCENTO', 10);
+if (!defined('SC_SCONTO_ORE')) define('SC_SCONTO_ORE', 48);
+if (!defined('SC_RECUPERO_ORE')) define('SC_RECUPERO_ORE', 2);
+
+// 27/11/2026: le email del sito partono a nome «SitoComodo», non col «WordPress» predefinito
+add_filter('wp_mail_from_name', function ($n) { return $n === 'WordPress' ? 'SitoComodo' : $n; });
+
+function sc_euro($cent) {
+    return number_format(((int) $cent) / 100, 2, ',', '.') . ' €';
+}
+
+function sc_recupero_prezzi($rifai) {
+    $pieno = $rifai ? 7900 : 9900;
+    return [$pieno, (int) round($pieno * (100 - SC_SCONTO_PERCENTO) / 100)];
+}
+
+// «sabato 28 novembre alle 12:45», in italiano anche se WordPress non lo è
+function sc_quando_it($ts) {
+    $g = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+    $m = ['', 'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+    return $g[(int) wp_date('w', $ts)] . ' ' . wp_date('j', $ts) . ' ' . $m[(int) wp_date('n', $ts)] . ' alle ' . wp_date('H:i', $ts);
+}
+
+// $c: nome, rifai (bool), dominio ('' se ha solo l'anteprima), anteprima (bool: c'è un'anteprima da riguardare),
+//     link (bottone), link_vedi (riapre l'anteprima), link_no (non scrivermi più), scade (timestamp)
+function sc_recupero_email($c) {
+    $nome = trim((string) ($c['nome'] ?? '')) ?: 'la tua attività';
+    $rifai = !empty($c['rifai']);
+    $dominio = (string) ($c['dominio'] ?? '');
+    [$pieno, $scontato] = sc_recupero_prezzi($rifai);
+    $scade = sc_quando_it((int) $c['scade']);
+    $e = function ($s) { return esc_html($s); };
+    $u = function ($s) { return esc_url($s); };
+
+    $oggetto = 'Il sito di ' . $nome . ' ti aspetta: ' . SC_SCONTO_PERCENTO . '% di sconto per ' . SC_SCONTO_ORE . ' ore';
+    $anteprima_testo = 'Lo metti online a ' . sc_euro($scontato) . ' invece di ' . sc_euro($pieno) . '. Lo sconto si applica da solo.';
+    $titolo = 'Il sito di ' . $nome . ' ti aspetta';
+    if ($dominio !== '') {
+        $apertura = 'Hai scelto ' . $dominio . ', ma il pagamento non è arrivato in fondo. Il tuo ordine è ancora salvato, con i dati che ci hai dato.';
+    } elseif (!empty($c['anteprima'])) {
+        $apertura = 'Hai visto l\'anteprima, ma non l\'hai ancora messa online. Il sito è pronto e lo teniamo da parte per te.';
+    } else {
+        $apertura = 'Il tuo ordine è ancora salvato, con i dati che ci hai dato.';
+    }
+    $offerta = 'Se lo metti online entro ' . SC_SCONTO_ORE . ' ore, ti facciamo il ' . SC_SCONTO_PERCENTO . '% di sconto.';
+    $bottone = ($rifai ? 'Completa l\'ordine a ' : 'Mettilo online a ') . sc_euro($scontato);
+    $punti = $rifai
+        ? ['Resta sul dominio che hai già: la tua email non si tocca', 'Pronto in 30 minuti, poi lo colleghi con la nostra guida',
+           'Se non ti piace, lo rifacciamo gratis entro 48 ore dalla consegna']
+        : ['Dominio e hosting gratis il primo anno, dominio registrato a tuo nome', 'Online entro 30 minuti dal pagamento',
+           'Se non ti piace, lo rifacciamo gratis entro 48 ore dalla consegna'];
+    $rinnovo = $rifai ? 'Dal secondo anno: hosting a 19 € + IVA all\'anno.' : 'Dal secondo anno: rinnovo di dominio e hosting a 29 € + IVA all\'anno.';
+    $perche = $dominio !== '' || empty($c['anteprima'])
+        ? 'Ti scriviamo perché hai iniziato un ordine su sitocomodo.it.'
+        : 'Ti scriviamo perché hai creato un\'anteprima del sito su sitocomodo.it.';
+
+    $f_titoli = "'Space Grotesk',Arial,Helvetica,sans-serif";
+    $f_testo = "Inter,Helvetica,Arial,sans-serif";
+    $lista = '';
+    foreach ($punti as $p) {
+        $lista .= '<tr><td width="28" valign="top" style="padding:4px 0;font:700 16px/24px ' . $f_testo . ';color:#C2410C">✓</td>'
+                . '<td style="padding:4px 0;font:400 16px/24px ' . $f_testo . ';color:#374151">' . $e($p) . '</td></tr>';
+    }
+    $vedi = ($dominio === '' && !empty($c['anteprima']) && !empty($c['link_vedi']))
+        ? '<p style="margin:18px 0 0;font:400 15px/22px ' . $f_testo . ';color:#374151;text-align:center">Vuoi riguardarlo prima? '
+          . '<a href="' . $u($c['link_vedi']) . '" style="color:#1D4ED8;font-weight:600">Riapri l\'anteprima</a></p>'
+        : '';
+
+    $html = '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<meta name="color-scheme" content="light only"><title>' . $e($oggetto) . '</title></head>'
+        . '<body style="margin:0;padding:0;background:#EEF4FF">'
+        . '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' . $e($anteprima_testo) . '</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF4FF"><tr><td align="center" style="padding:28px 14px 40px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">'
+        . '<tr><td style="padding:0 6px 18px"><a href="https://sitocomodo.it/" style="text-decoration:none">'
+        . '<img src="https://sitocomodo.it/marchio/sitocomodo-logo.png" width="190" height="36" alt="SitoComodo" style="display:block;border:0;width:190px;height:auto"></a></td></tr>'
+        . '<tr><td style="background:#FFFFFF;border:2px solid #111827;border-radius:24px;box-shadow:6px 6px 0 #111827;padding:30px 24px 28px">'
+        . '<h1 style="margin:0 0 12px;font:700 30px/36px ' . $f_titoli . ';letter-spacing:-0.01em;color:#111827">' . $e($titolo) . '</h1>'
+        . '<p style="margin:0 0 12px;font:400 17px/26px ' . $f_testo . ';color:#374151">' . $e($apertura) . '</p>'
+        . '<p style="margin:0 0 20px;font:600 17px/26px ' . $f_testo . ';color:#111827">' . $e($offerta) . '</p>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FEF3C7;border:2px solid #111827;border-radius:16px">'
+        . '<tr><td style="padding:16px 18px">'
+        . '<p style="margin:0;font:400 16px/22px ' . $f_testo . ';color:#4B5563"><s>' . $e(sc_euro($pieno)) . '</s> &nbsp;'
+        . '<span style="font:700 30px/36px ' . $f_titoli . ';color:#111827;white-space:nowrap">' . $e(sc_euro($scontato)) . '</span></p>'
+        . '<p style="margin:6px 0 0;font:400 14px/20px ' . $f_testo . ';color:#374151">IVA inclusa. Lo sconto vale fino a ' . $e($scade) . '.</p>'
+        . '</td></tr></table>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px"><tr>'
+        . '<td align="center" style="background:#1D4ED8;border:2px solid #111827;border-radius:16px;box-shadow:4px 4px 0 #111827">'
+        . '<a href="' . $u($c['link']) . '" style="display:block;padding:17px 14px;font:600 18px/22px ' . $f_testo . ';color:#FFFFFF;text-decoration:none">' . $e($bottone) . '</a>'
+        . '</td></tr></table>'
+        . '<p style="margin:12px 0 0;font:400 14px/20px ' . $f_testo . ';color:#4B5563;text-align:center">Lo sconto si applica da solo quando paghi da questo bottone.</p>'
+        . $vedi
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #D1D5DB"><tr><td style="padding-top:16px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0">' . $lista . '</table>'
+        . '<p style="margin:8px 0 0;font:400 14px/20px ' . $f_testo . ';color:#4B5563">' . $e($rinnovo) . '</p></td></tr></table>'
+        . '<p style="margin:20px 0 0;font:400 16px/24px ' . $f_testo . ';color:#374151">Hai un dubbio o vuoi cambiare qualcosa? Rispondi a questa email.</p>'
+        . '<p style="margin:14px 0 0;font:700 17px/24px ' . $f_titoli . ';color:#111827">Team SitoComodo</p>'
+        . '</td></tr>'
+        . '<tr><td style="padding:22px 8px 0;font:400 13px/19px ' . $f_testo . ';color:#4B5563">'
+        . $e($perche) . ' Non ti mandiamo altri promemoria. '
+        . '<a href="' . $u($c['link_no']) . '" style="color:#4B5563">Non scrivermi più</a>'
+        . '<br><br>SitoComodo · <a href="mailto:info@sitocomodo.it" style="color:#4B5563">info@sitocomodo.it</a> · P.IVA 05299170752 · '
+        . '<a href="https://sitocomodo.it/privacy/" style="color:#4B5563">Privacy</a></td></tr>'
+        . '</table></td></tr></table></body></html>';
+
+    $testo = implode("\n", array_merge(
+        [$titolo, '', $apertura, $offerta, '',
+         sc_euro($scontato) . ' invece di ' . sc_euro($pieno) . ', IVA inclusa. Lo sconto vale fino a ' . $scade . '.', '',
+         $bottone . ':', $c['link'], 'Lo sconto si applica da solo quando paghi da questo link.'],
+        ($dominio === '' && !empty($c['anteprima']) && !empty($c['link_vedi'])) ? ['', 'Vuoi riguardarlo prima? Riapri l\'anteprima:', $c['link_vedi']] : [],
+        [''], array_map(function ($p) { return '- ' . $p; }, $punti), [$rinnovo],
+        ['', 'Hai un dubbio o vuoi cambiare qualcosa? Rispondi a questa email.', '', 'Team SitoComodo', '',
+         $perche . ' Non ti mandiamo altri promemoria. Non vuoi altre email: ' . $c['link_no'],
+         'SitoComodo · info@sitocomodo.it · P.IVA 05299170752']));
+    return [$oggetto, $html, $testo];
+}
+
+function sc_recupero_manda($a, $c) {
+    [$oggetto, $html, $testo] = sc_recupero_email($c);
+    $alt = function ($m) use ($testo) { $m->AltBody = $testo; };
+    add_action('phpmailer_init', $alt);
+    $ok = wp_mail($a, $oggetto, $html, ['Content-Type: text/html; charset=UTF-8', 'Reply-To: ' . SC_DESTINATARIO]);
+    remove_action('phpmailer_init', $alt);
+    return $ok;
+}
+
+function sc_recupero_chiave_email($m) {
+    return md5(strtolower(trim((string) $m)));
+}
+
+// numeri finti («0000000000») e indirizzi nostri non ricevono niente
+function sc_recupero_sembra_vero($d) {
+    $cifre = preg_replace('/\D/', '', (string) ($d['telefono'] ?? ''));
+    if (strlen($cifre) < 6 || count(array_unique(str_split($cifre))) < 3) return false;
+    return is_email($d['email'] ?? '') && strtolower((string) $d['email']) !== strtolower(SC_DESTINATARIO);
+}
+
+add_action('init', function () {
+    if (get_option('sc_recupero_attivo', '') === '1' && !wp_next_scheduled('sc_recupero_giro')) {
+        wp_schedule_event(time() + 300, 'hourly', 'sc_recupero_giro');
+    }
+});
+
+add_action('sc_recupero_giro', 'sc_recupero_giro');
+function sc_recupero_giro($prova = false) {
+    if (!$prova && get_option('sc_recupero_attivo', '') !== '1') return ['spenta' => true];
+    $ora = time();
+    $h = (int) wp_date('G', $ora);
+    if (!$prova && ($h < 9 || $h >= 20)) return ['fuori orario' => true];
+    $dal = (int) get_option('sc_recupero_dal', 0);
+    $attesa = SC_RECUPERO_ORE * HOUR_IN_SECONDS;
+    $giorni3 = 3 * DAY_IN_SECONDS;
+    $inviati = get_option('sc_recupero_inviati', []);
+    $inviati = is_array($inviati) ? $inviati : [];
+    $no = get_option('sc_no_email', []);
+    $no = is_array($no) ? $no : [];
+    $ordini = sc_ordini_leggi();
+    $tutte = sc_anteprime_leggi();
+    $pagati = [];
+    foreach ($ordini as $o) {
+        if (strpos((string) ($o['stato'] ?? ''), 'pagato') !== 0) continue;
+        foreach ([$o['email'] ?? '', $o['pagamento']['email_cliente'] ?? ''] as $m) {
+            if (is_email($m)) $pagati[sc_recupero_chiave_email($m)] = true;
+        }
+    }
+    $libero = function ($m) use (&$inviati, $no, $pagati) {
+        $k = sc_recupero_chiave_email($m);
+        return !isset($inviati[$k]) && !isset($no[$k]) && !isset($pagati[$k]);
+    };
+    $da_mandare = [];
+    foreach ($ordini as $i => $o) {   // prima gli ordini fermi prima del pagamento: hanno già il dominio
+        if (($o['stato'] ?? '') !== 'in attesa di pagamento' || !empty($o['recupero'])) continue;
+        $t = sc_ts($o['ricevuto'] ?? '');
+        if ($t <= $dal || $t > $ora - $attesa || $t < $ora - $giorni3) continue;
+        if (!sc_recupero_sembra_vero($o) || !$libero($o['email'])) continue;
+        $da_mandare[] = ['tipo' => 'ordine', 'i' => $i, 'dati' => $o];
+        $inviati[sc_recupero_chiave_email($o['email'])] = $ora;   // segnaposto: niente doppioni nello stesso giro
+    }
+    foreach ($tutte as $codice => $a) {   // poi le anteprime pronte, scadute e mai arrivate al dominio
+        $d = $a['dati'] ?? [];
+        if (!empty($a['recupero']) || !empty($a['vuole_pagare']) || (int) ($a['versione'] ?? 0) < 1) continue;
+        if (!in_array($a['stato'] ?? '', ['pronta', 'in modifica'], true) || (int) ($a['scade'] ?? 0) > $ora) continue;
+        $t = (int) ($a['creata'] ?? 0);
+        if ($t <= $dal || $t > $ora - $attesa || $t < $ora - $giorni3) continue;
+        if (!sc_recupero_sembra_vero($d) || !$libero($d['email'])) continue;
+        $da_mandare[] = ['tipo' => 'anteprima', 'codice' => $codice, 'dati' => $d];
+        $inviati[sc_recupero_chiave_email($d['email'])] = $ora;
+    }
+    if ($prova) return ['da_mandare' => array_map(function ($x) { return $x['tipo'] . ': ' . ($x['dati']['nome'] ?? ''); }, $da_mandare)];
+    if (!$da_mandare) return ['mandate' => 0];
+
+    $gettoni = get_option('sc_recupero', []);
+    $gettoni = is_array($gettoni) ? $gettoni : [];
+    $fatte = 0;
+    foreach ($da_mandare as $x) {
+        $d = $x['dati'];
+        $tok = bin2hex(random_bytes(10));
+        $scade = $ora + SC_SCONTO_ORE * HOUR_IN_SECONDS;
+        $rifai = ($d['offerta'] ?? '') === 'rifai';
+        $c = ['nome' => $d['nome'] ?? '', 'rifai' => $rifai, 'scade' => $scade,
+              'dominio' => $x['tipo'] === 'ordine' ? (string) ($d['dominio'] ?? '') : '',
+              'anteprima' => $x['tipo'] === 'anteprima',
+              'link' => home_url('/riprendi/' . $tok . '/'), 'link_vedi' => home_url('/riprendi/' . $tok . '/?vedi=1'),
+              'link_no' => home_url('/niente-email/' . $tok . '/')];
+        $ok = sc_recupero_manda($d['email'], $c);
+        $gettoni[$tok] = ['tipo' => $x['tipo'], 'rif' => $x['tipo'] === 'ordine' ? ($d['riferimento_stripe'] ?? '') : $x['codice'],
+                          'anteprima' => $x['tipo'] === 'anteprima' ? $x['codice'] : (string) ($d['anteprima'] ?? ''),
+                          'email' => $d['email'], 'nome' => $d['nome'] ?? '', 'inviata' => $ora, 'scade' => $scade, 'partita' => $ok ? 'sì' : 'no'];
+        if ($x['tipo'] === 'ordine') $ordini[$x['i']]['recupero'] = $tok; else $tutte[$x['codice']]['recupero'] = $tok;
+        if ($ok) $fatte++;
+    }
+    $limite = $ora - 30 * DAY_IN_SECONDS;
+    $gettoni = array_filter($gettoni, function ($g) use ($limite) { return (int) ($g['inviata'] ?? 0) >= $limite; });
+    update_option('sc_recupero', $gettoni, false);
+    update_option('sc_recupero_inviati', $inviati, false);
+    sc_ordini_scrivi($ordini);
+    sc_anteprime_scrivi($tutte);
+    return ['mandate' => $fatte];
+}
+
+function sc_recupero_trova_ordine($g) {
+    $ordini = sc_ordini_leggi();
+    for ($i = count($ordini) - 1; $i >= 0; $i--) {
+        if (($ordini[$i]['recupero'] ?? '') !== '' && hash_equals((string) $ordini[$i]['recupero'], (string) ($g['tok'] ?? ''))) return $ordini[$i];
+    }
+    return null;
+}
+
+// /riprendi/<token>/ (bottone dell'email) e /niente-email/<token>/ (non scrivermi più)
+add_action('template_redirect', function () {
+    $percorso = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
+    if (!preg_match('#^/(riprendi|niente-email)/([a-f0-9]{20})/?$#', $percorso, $m)) return;
+    nocache_headers();
+    header('X-Robots-Tag: noindex, nofollow');
+    $gettoni = get_option('sc_recupero', []);
+    $g = is_array($gettoni) ? ($gettoni[$m[2]] ?? null) : null;
+    $pagina = function ($titolo, $corpo) {
+        status_header(200);
+        header('Content-Type: text/html; charset=utf-8');
+        echo sc_anteprima_pagina($titolo, $corpo);
+        exit;
+    };
+    if (!$g) { wp_safe_redirect(home_url('/ordine/?offerta=nuovo'), 302); exit; }
+    if ($m[1] === 'niente-email') {
+        $no = get_option('sc_no_email', []);
+        $no = is_array($no) ? $no : [];
+        $no[sc_recupero_chiave_email($g['email'])] = time();
+        update_option('sc_no_email', $no, false);
+        $pagina('Fatto', '<h1>Fatto, non ti scriviamo più</h1><p>Abbiamo tolto il tuo indirizzo: da noi non riceverai altre email come questa.</p>'
+            . '<p class="piccolo">Se hai un ordine in corso, le email sull\'ordine (ricevuta e consegna) arrivano lo stesso. Per qualsiasi cosa: '
+            . '<a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a></p>');
+    }
+    $g['tok'] = $m[2];
+    $valido = time() < (int) $g['scade'];
+    $ora_ms = time() * 1000;
+    $sconto = $valido ? ['codice' => SC_SCONTO_CODICE, 'percento' => SC_SCONTO_PERCENTO, 'scade' => (int) $g['scade'] * 1000, 'da' => $ora_ms] : null;
+    $ordine = null;
+    $dest = home_url('/ordine/?offerta=nuovo');
+    $o = $g['tipo'] === 'ordine' ? sc_recupero_trova_ordine($g) : null;
+    if ($o && ($o['stato'] ?? '') === 'in attesa di pagamento') {
+        $ordine = ['dominio' => $o['dominio'] ?? '', 'nome' => $o['nome'] ?? '', 'tipo' => $o['tipo'] ?? '', 'email' => $o['email'] ?? '',
+                   'telefono' => $o['telefono'] ?? '', 'offerta' => ($o['offerta'] ?? '') === 'rifai' ? 'rifai' : 'nuovo',
+                   'modello' => ($o['modello'] ?? '') ?: 'nostro', 'carattere' => ($o['carattere'] ?? '') ?: 'nostro',
+                   'modello_nome' => ($o['modello_scelto'] ?? '') ?: 'Lo scegliamo noi', 'carattere_nome' => ($o['carattere_scelto'] ?? '') ?: 'Lo scegliamo noi'];
+        if (!empty($o['anteprima'])) $ordine['anteprima'] = $o['anteprima'];
+        $dest = home_url('/checkout/?offerta=' . $ordine['offerta']);
+    } elseif ($o) {   // già pagato
+        $pagina('Ordine già pagato', '<h1>Questo ordine è già pagato</h1><p>Non devi fare altro: ti scriviamo noi appena il sito è online.</p>'
+            . '<p class="piccolo">Per qualsiasi cosa: <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a></p>');
+    }
+    $ant = (string) ($g['anteprima'] ?? '');
+    if (!$ordine && sc_anteprima_codice_ok($ant)) {
+        $tutte = sc_anteprime_leggi();
+        if (!empty($tutte[$ant])) {
+            $dest = home_url('/ordine/?anteprima=' . $ant . '#dominio');
+            // «Riapri l'anteprima»: torna visibile per altri SC_ANTEPRIMA_MINUTI minuti
+            if (!empty($_GET['vedi']) && ($tutte[$ant]['stato'] ?? '') === 'pronta' && (int) ($tutte[$ant]['versione'] ?? 0) > 0) {
+                $tutte[$ant]['scade'] = max((int) ($tutte[$ant]['scade'] ?? 0), time() + SC_ANTEPRIMA_MINUTI * MINUTE_IN_SECONDS);
+                sc_anteprime_scrivi($tutte);
+                $dest = sc_anteprima_url($ant);
+            }
+        }
+    }
+    $g['aperta'] = time();
+    $gettoni[$m[2]] = array_diff_key($g, ['tok' => 1]);
+    update_option('sc_recupero', $gettoni, false);
+    $js = '<script>(function(){try{'
+        . ($sconto ? 'localStorage.setItem("sitocomodo_sconto",' . wp_json_encode(wp_json_encode($sconto)) . ');' : 'localStorage.removeItem("sitocomodo_sconto");')
+        . ($ordine ? 'var o={};try{o=JSON.parse(localStorage.getItem("sitocomodo_ordine")||"{}")||{};}catch(e){}var n=' . wp_json_encode($ordine)
+                   . ';for(var k in n)o[k]=n[k];localStorage.setItem("sitocomodo_ordine",JSON.stringify(o));' : '')
+        . '}catch(e){}' . ($valido ? 'location.replace(' . wp_json_encode($dest) . ');' : '') . '})();</script>';
+    if ($valido) {
+        $pagina('Un attimo', '<h1>Un attimo…</h1><p>Ti portiamo al tuo ordine, con lo sconto già pronto.</p>'
+            . '<a class="bottone" href="' . esc_attr($dest) . '">Continua</a>' . $js);
+    }
+    [$pieno] = sc_recupero_prezzi(($ordine['offerta'] ?? '') === 'rifai');
+    $pagina('Sconto scaduto', '<h1>Lo sconto è scaduto</h1><p>Valeva ' . SC_SCONTO_ORE . ' ore. Il tuo sito però c\'è ancora: puoi metterlo online a '
+        . esc_html(sc_euro($pieno)) . ' IVA inclusa.</p><a class="bottone" href="' . esc_attr($dest) . '">Continua</a>'
+        . '<p class="piccolo" style="margin-top:16px">Hai una domanda? Scrivici a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>.</p>' . $js);
+}, -1);
+
+// solo per l'amministratore: accende/spegne, prova a vuoto, email di prova a info@
+add_action('rest_api_init', function () {
+    register_rest_route('sitocomodo/v1', '/recupero-stato', [
+        'methods' => ['GET', 'POST'],
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function (WP_REST_Request $r) {
+            if ($r->get_method() === 'POST') {
+                $acceso = (bool) $r->get_param('attivo');
+                if ($acceso && get_option('sc_recupero_attivo', '') !== '1') update_option('sc_recupero_dal', time(), false);
+                update_option('sc_recupero_attivo', $acceso ? '1' : '', false);
+                // «dal» (timestamp): da quale momento contano i carrelli; serve per includere quelli nati poco prima dell'accensione
+                $dal = (int) $r->get_param('dal');
+                if ($acceso && $dal > 0 && $dal <= time()) update_option('sc_recupero_dal', $dal, false);
+                if (!$acceso) wp_clear_scheduled_hook('sc_recupero_giro');
+            }
+            $g = get_option('sc_recupero', []);
+            return ['attivo' => get_option('sc_recupero_attivo', '') === '1', 'dal' => (int) get_option('sc_recupero_dal', 0),
+                    'prossimo_giro' => wp_next_scheduled('sc_recupero_giro'), 'giro_a_vuoto' => sc_recupero_giro(true),
+                    'mandate' => array_values(array_map(function ($x) {
+                        return ['nome' => $x['nome'] ?? '', 'inviata' => wp_date('d/m H:i', (int) ($x['inviata'] ?? 0)),
+                                'partita' => $x['partita'] ?? '', 'aperta' => !empty($x['aperta'])];
+                    }, is_array($g) ? $g : []))];
+        },
+    ]);
+    register_rest_route('sitocomodo/v1', '/recupero-prova', [
+        'methods' => 'POST',
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function (WP_REST_Request $r) {
+            $tipo = (string) $r->get_param('tipo');
+            $c = ['nome' => 'Pizzeria da Mario', 'rifai' => $tipo === 'rifai', 'scade' => time() + SC_SCONTO_ORE * HOUR_IN_SECONDS,
+                  'dominio' => $tipo === 'anteprima' ? '' : 'pizzeriadamario.it', 'anteprima' => $tipo === 'anteprima',
+                  'link' => home_url('/'), 'link_vedi' => home_url('/'), 'link_no' => home_url('/')];
+            return ['ok' => sc_recupero_manda(SC_DESTINATARIO, $c)];
+        },
+    ]);
+});
+
+// prezzo sul bottone «Lo voglio» dell'anteprima: scontato se il cliente è tornato dall'email e lo sconto vale ancora
+function sc_anteprima_prezzo($a) {
+    $tok = (string) ($a['recupero'] ?? '');
+    $g = $tok !== '' ? ((array) get_option('sc_recupero', []))[$tok] ?? null : null;
+    if (is_array($g) && !empty($g['aperta']) && time() < (int) ($g['scade'] ?? 0)) return sc_euro(sc_recupero_prezzi(false)[1]);
+    return '99 €';
 }
