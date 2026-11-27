@@ -1675,9 +1675,19 @@ add_action('rest_api_init', function () {
 // fabbrica rimette online lo stesso sito che il cliente ha visto, sul dominio vero (senza ricostruirlo).
 
 if (!defined('SC_ANTEPRIME_GIORNO')) define('SC_ANTEPRIME_GIORNO', 20);
-if (!defined('SC_ANTEPRIMA_MINUTI')) define('SC_ANTEPRIMA_MINUTI', 40);
+if (!defined('SC_ANTEPRIMA_MINUTI')) define('SC_ANTEPRIMA_MINUTI', 1440);   // 27/11/2026: 24 ore (prima 40 minuti), deciso da Giuseppe
 if (!defined('SC_ANTEPRIMA_GIRI')) define('SC_ANTEPRIMA_GIRI', 2);
 if (!defined('SC_ANTEPRIME_STESSO_IP')) define('SC_ANTEPRIME_STESSO_IP', 3);
+
+// la durata dell'anteprima detta a parole: «24 ore», «40 minuti», «1 ora e 30 minuti»
+function sc_anteprima_durata() {
+    $m = (int) SC_ANTEPRIMA_MINUTI;
+    $h = intdiv($m, 60);
+    $r = $m % 60;
+    if ($h === 0) return $m . ' minuti';
+    $t = $h === 1 ? '1 ora' : $h . ' ore';
+    return $r ? $t . ' e ' . $r . ' minuti' : $t;
+}
 
 function sc_anteprime_leggi() {
     $a = get_option('sc_anteprime', []);
@@ -1937,9 +1947,9 @@ function sc_anteprima_email_cliente($a, $modifica) {
     $link = sc_anteprima_url($a['codice']);
     $righe = $modifica
         ? ['Buongiorno,', '', 'abbiamo fatto la modifica che hai chiesto. La nuova anteprima del sito di ' . $nome . ' è qui:', $link, '',
-           'Resta visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.']
+           'Resta visibile per ' . sc_anteprima_durata() . '. Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.']
         : ['Buongiorno,', '', 'l\'anteprima del sito di ' . $nome . ' è pronta:', $link, '',
-           'Resta visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Se vuoi cambiare qualcosa, dalla pagina puoi chiedere fino a ' . SC_ANTEPRIMA_GIRI . ' modifiche.',
+           'Resta visibile per ' . sc_anteprima_durata() . '. Se vuoi cambiare qualcosa, dalla pagina puoi chiedere fino a ' . SC_ANTEPRIMA_GIRI . ' modifiche.',
            'Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.'];
     $righe = array_merge($righe, ['', 'Per qualsiasi dubbio puoi rispondere a questa email.', '', 'Il team di SitoComodo', SC_DESTINATARIO]);
     $oggetto = $modifica ? 'Modifica fatta: guarda il sito di ' . $nome : 'Il sito di ' . $nome . ' è pronto da vedere';
@@ -2199,7 +2209,7 @@ function sc_anteprima_servi($codice, $resto) {
         if (!$pagina) { status_header(404); exit; }
         $nome = esc_html($a['dati']['nome'] ?? 'la tua attività');
         if ($scaduta) {
-            $html('Anteprima scaduta', '<h1>L\'anteprima è scaduta</h1><p>Era visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Il sito di ' . $nome
+            $html('Anteprima scaduta', '<h1>L\'anteprima è scaduta</h1><p>Era visibile per ' . sc_anteprima_durata() . '. Il sito di ' . $nome
                 . ' però è pronto e ti aspetta: scegli il dominio e lo mettiamo online.</p><a class="bottone" href="' . esc_attr($lo_voglio) . '">Mettilo online · 99 €</a>'
                 . '<p class="piccolo" style="margin-top:16px">99 € IVA inclusa, una volta sola. Hai una domanda? Scrivici a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>.</p>'
                 . sc_traccia_js($codice, 'scaduta', true));
@@ -2220,8 +2230,8 @@ function sc_anteprima_servi($codice, $resto) {
         $html('Prepariamo il tuo sito', '<div class="rotella" role="presentation"></div><h1>Stiamo preparando il sito di ' . $nome . '</h1>'
             . '<p>Di solito ci vogliono pochi minuti. Resta pure qui: si apre da solo appena è pronto. Ti mandiamo il link anche per email.</p>'
             . '<ol><li>Scegliamo foto e colori</li><li>Scriviamo i testi</li><li>Lo controlliamo da telefono e da computer</li></ol>'
-            . '<p class="piccolo" style="margin-top:16px">In preparazione da <span id="sc-tempo">0:00</span>. Poi lo vedi gratis per ' . SC_ANTEPRIMA_MINUTI
-            . ' minuti e paghi solo se ti piace.</p>' . sc_traccia_js($codice, 'attesa'), true, $codice);
+            . '<p class="piccolo" style="margin-top:16px">In preparazione da <span id="sc-tempo">0:00</span>. Poi lo vedi gratis per ' . sc_anteprima_durata()
+            . ' e paghi solo se ti piace.</p>' . sc_traccia_js($codice, 'attesa'), true, $codice);
     }
     $base = realpath(sc_anteprima_cartella($codice));
     $file = $base ? realpath($base . '/' . $resto) : false;
@@ -2287,7 +2297,7 @@ function sc_anteprima_barra($a, $lo_voglio) {
         . '@media (max-width:480px){#sc-barra .sc-lungo{display:none}#sc-barra{gap:8px;padding:0 10px}#sc-barra button,#sc-barra a.sc-voglio{padding:0 11px}}'
         . '@media (max-width:360px){#sc-barra button,#sc-barra a.sc-voglio{padding:0 8px;font-size:13px}}';
     $html = '<div id="sc-barra" role="region" aria-label="Anteprima di SitoComodo">'
-        . '<div class="sc-info"><b>Anteprima<span class="sc-lungo"> gratis</span></b><span id="sc-resta">ancora ' . SC_ANTEPRIMA_MINUTI . ':00</span></div>'
+        . '<div class="sc-info"><b>Anteprima<span class="sc-lungo"> gratis</span></b><span id="sc-resta">ancora ' . esc_html(sc_anteprima_durata()) . '</span></div>'
         . '<button type="button" class="sc-mod-btn" id="sc-apri-mod">Modifica</button>'
         . '<a class="sc-voglio" href="' . esc_attr($lo_voglio) . '">Lo voglio · ' . esc_html(sc_anteprima_prezzo($a)) . '</a></div>'
         . '<div id="sc-avviso" role="status" aria-live="polite"></div>'
@@ -2306,7 +2316,8 @@ function sc_anteprima_barra($a, $lo_voglio) {
         . 'function etichetta(){btn.textContent=D.giri>0?"Modifica ("+D.giri+")":"Modifica";}etichetta();'
         . 'var attesa=D.stato==="in modifica";'
         . 'function tic(){if(attesa){resta.textContent="sto facendo la modifica…";return;}var s=Math.round(D.scade-(Date.now()/1000-sfasa));'
-        . 'if(s<=0){location.reload();return;}resta.textContent=(innerWidth>480?"visibile ancora ":"ancora ")+Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}tic();setInterval(tic,1000);'
+        . 'if(s<=0){location.reload();return;}var q=s>=3600?Math.floor(s/3600)+(innerWidth>480?" h ":"h ")+Math.floor(s%3600/60)+(innerWidth>480?" min":"m"):Math.floor(s/60)+":"+String(s%60).padStart(2,"0");'
+        . 'resta.textContent=(innerWidth>480?"visibile ancora ":innerWidth>340||s<3600?"ancora ":"")+q;}tic();setInterval(tic,1000);'
         . 'function controlla(){fetch("/wp-json/sitocomodo/v1/anteprima-stato?codice="+D.codice,{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){'
         . 'if(!j||!j.ok)return;if(j.versione>D.versione||(attesa&&j.stato==="pronta")){try{sessionStorage.setItem("sc-mostra-"+D.codice,"1");}catch(e){}location.reload();}}).catch(function(){});}'
         . 'if(attesa)setInterval(controlla,8000);'
@@ -2393,7 +2404,7 @@ function sc_pagina_anteprime() {
     $gettoni = get_option('sc_recupero', []);
     $gettoni = is_array($gettoni) ? $gettoni : [];
     echo '<div class="wrap"><h1>Anteprime gratis</h1><p>Chi ha chiesto di vedere il sito prima di pagare (ultimi 30 giorni). Oggi avviate: '
-        . (int) sc_anteprime_avviate_oggi() . ' di ' . SC_ANTEPRIME_GIORNO . '. Restano visibili ' . SC_ANTEPRIMA_MINUTI . ' minuti per versione, '
+        . (int) sc_anteprime_avviate_oggi() . ' di ' . SC_ANTEPRIME_GIORNO . '. Restano visibili ' . sc_anteprima_durata() . ' per versione, '
         . SC_ANTEPRIMA_GIRI . ' modifiche gratis.</p>';
     echo '<table class="widefat striped"><thead><tr><th>Quando</th><th>Attività</th><th>Contatti</th><th>Stato</th><th>Cosa ha fatto</th><th>Modifiche</th><th>Dominio scelto</th><th>Anteprima</th></tr></thead><tbody>';
     foreach (array_slice($tutte, 0, 200) as $a) {
