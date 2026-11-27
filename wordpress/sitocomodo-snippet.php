@@ -1676,7 +1676,9 @@ add_action('rest_api_init', function () {
 
 if (!defined('SC_ANTEPRIME_GIORNO')) define('SC_ANTEPRIME_GIORNO', 20);
 if (!defined('SC_ANTEPRIMA_MINUTI')) define('SC_ANTEPRIMA_MINUTI', 1440);   // 27/11/2026: 24 ore (prima 40 minuti), deciso da Giuseppe
-if (!defined('SC_ANTEPRIMA_GIRI')) define('SC_ANTEPRIMA_GIRI', 2);
+// 27/11/2026: niente più «massimo due modifiche» (deciso da Giuseppe): al cliente non si dice nessun numero.
+// Resta solo un tetto tecnico contro gli abusi, perché ogni modifica fa ripartire la fabbrica.
+if (!defined('SC_ANTEPRIMA_GIRI')) define('SC_ANTEPRIMA_GIRI', 10);
 if (!defined('SC_ANTEPRIME_STESSO_IP')) define('SC_ANTEPRIME_STESSO_IP', 3);
 
 // la durata dell'anteprima detta a parole: «24 ore», «40 minuti», «1 ora e 30 minuti»
@@ -1933,7 +1935,7 @@ function sc_anteprima_avvisa_giuseppe($a, $oggetto, $righe_extra = []) {
         'Attività: ' . ($d['nome'] ?? '') . ' (' . ($d['tipo'] ?? '') . ')' . (($d['citta'] ?? '') !== '' ? ' · ' . $d['citta'] : ''),
         'Telefono: ' . ($d['telefono'] ?? '') . ' · Email: ' . ($d['email'] ?? ''),
         'Anteprima: ' . sc_anteprima_url($a['codice']),
-        'Stato: ' . ($a['stato'] ?? '') . ' · modifiche usate: ' . (int) ($a['giri'] ?? 0) . ' di ' . SC_ANTEPRIMA_GIRI]);
+        'Stato: ' . ($a['stato'] ?? '') . ' · modifiche chieste: ' . (int) ($a['giri'] ?? 0)]);
     $h = ['Content-Type: text/plain; charset=UTF-8'];
     if (is_email($d['email'] ?? '')) $h[] = 'Reply-To: ' . $d['email'];
     wp_mail(SC_DESTINATARIO, $oggetto . ' — ' . ($d['nome'] ?? ''), implode("\n", $righe), $h);
@@ -1949,7 +1951,7 @@ function sc_anteprima_email_cliente($a, $modifica) {
         ? ['Buongiorno,', '', 'abbiamo fatto la modifica che hai chiesto. La nuova anteprima del sito di ' . $nome . ' è qui:', $link, '',
            'Resta visibile per ' . sc_anteprima_durata() . '. Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.']
         : ['Buongiorno,', '', 'l\'anteprima del sito di ' . $nome . ' è pronta:', $link, '',
-           'Resta visibile per ' . sc_anteprima_durata() . '. Se vuoi cambiare qualcosa, dalla pagina puoi chiedere fino a ' . SC_ANTEPRIMA_GIRI . ' modifiche.',
+           'Resta visibile per ' . sc_anteprima_durata() . '. Se vuoi cambiare qualcosa, premi «Modifica» sulla pagina e scrivici cosa: lo sistemiamo noi e ti facciamo vedere la nuova versione.',
            'Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa, una volta sola.'];
     $righe = array_merge($righe, ['', 'Per qualsiasi dubbio puoi rispondere a questa email.', '', 'Il team di SitoComodo', SC_DESTINATARIO]);
     $oggetto = $modifica ? 'Modifica fatta: guarda il sito di ' . $nome : 'Il sito di ' . $nome . ' è pronto da vedere';
@@ -2090,7 +2092,7 @@ add_action('rest_api_init', function () {
             if (mb_strlen($testo) < 4) return new WP_REST_Response(['ok' => false, 'errore' => 'Scrivi cosa vuoi cambiare.'], 400);
             if (($tutte[$c]['stato'] ?? '') !== 'pronta') return new WP_REST_Response(['ok' => false, 'errore' => 'Stiamo ancora lavorando all\'anteprima: aspetta che sia pronta.'], 409);
             if ((int) $tutte[$c]['giri'] >= SC_ANTEPRIMA_GIRI) {
-                return new WP_REST_Response(['ok' => false, 'errore' => 'Hai già usato le ' . SC_ANTEPRIMA_GIRI . ' modifiche gratis. Dopo il pagamento le piccole modifiche restano gratis per 14 giorni.'], 409);
+                return new WP_REST_Response(['ok' => false, 'errore' => 'Per le prossime modifiche scrivici a info@sitocomodo.it: le facciamo noi a mano.'], 409);
             }
             $tutte[$c]['giri'] = (int) $tutte[$c]['giri'] + 1;
             $tutte[$c]['stato'] = 'in modifica';
@@ -2313,7 +2315,7 @@ function sc_anteprima_barra($a, $lo_voglio) {
         . 'txt=document.getElementById("sc-mod-testo"),err=document.getElementById("sc-mod-err"),invia=document.getElementById("sc-mod-invia"),avv=document.getElementById("sc-avviso");'
         . 'function avviso(t,s){avv.innerHTML="";var b=document.createElement("b");b.textContent=t;avv.appendChild(b);if(s){var p=document.createElement("div");p.textContent=s;avv.appendChild(p);}'
         . 'var x=document.createElement("button");x.type="button";x.textContent="Chiudi";x.onclick=function(){avv.classList.remove("aperto");};avv.appendChild(x);avv.classList.add("aperto");}'
-        . 'function etichetta(){btn.textContent=D.giri>0?"Modifica ("+D.giri+")":"Modifica";}etichetta();'
+        . 'function etichetta(){btn.textContent="Modifica";}etichetta();'
         . 'var attesa=D.stato==="in modifica";'
         . 'function tic(){if(attesa){resta.textContent="sto facendo la modifica…";return;}var s=Math.round(D.scade-(Date.now()/1000-sfasa));'
         . 'if(s<=0){location.reload();return;}var q=s>=3600?Math.floor(s/3600)+(innerWidth>480?" h ":"h ")+Math.floor(s%3600/60)+(innerWidth>480?" min":"m"):Math.floor(s/60)+":"+String(s%60).padStart(2,"0");'
@@ -2324,7 +2326,7 @@ function sc_anteprima_barra($a, $lo_voglio) {
         . 'try{if(sessionStorage.getItem("sc-mostra-"+D.codice)&&(D.fatto||D.non_fatto)){sessionStorage.removeItem("sc-mostra-"+D.codice);'
         . 'avviso(D.fatto?"Modifica fatta":"Modifica non fatta",[D.fatto,D.non_fatto].filter(Boolean).join(" · "));}}catch(e){}'
         . 'function apri(){if(attesa){avviso("Sto facendo la modifica","Tra pochi minuti questa pagina si aggiorna da sola.");return;}'
-        . 'if(D.giri<=0){avviso("Hai usato le "+D.max+" modifiche gratis","Dopo il pagamento le piccole modifiche restano gratis per 14 giorni: scrivici a info@sitocomodo.it.");return;}'
+        . 'if(D.giri<=0){avviso("Per le prossime modifiche scrivici","Manda un\'email a info@sitocomodo.it con quello che vuoi cambiare: lo facciamo noi a mano.");return;}'
         . 'err.hidden=true;mod.classList.add("aperto");setTimeout(function(){txt.focus();},50);}'
         . 'function chiudi(){mod.classList.remove("aperto");btn.focus();}'
         . 'btn.addEventListener("click",apri);document.getElementById("sc-mod-annulla").addEventListener("click",chiudi);'
@@ -2405,7 +2407,7 @@ function sc_pagina_anteprime() {
     $gettoni = is_array($gettoni) ? $gettoni : [];
     echo '<div class="wrap"><h1>Anteprime gratis</h1><p>Chi ha chiesto di vedere il sito prima di pagare (ultimi 30 giorni). Oggi avviate: '
         . (int) sc_anteprime_avviate_oggi() . ' di ' . SC_ANTEPRIME_GIORNO . '. Restano visibili ' . sc_anteprima_durata() . ' per versione, '
-        . SC_ANTEPRIMA_GIRI . ' modifiche gratis.</p>';
+        . 'modifiche senza limite per il cliente (tetto tecnico: ' . SC_ANTEPRIMA_GIRI . ' per anteprima).</p>';
     echo '<table class="widefat striped"><thead><tr><th>Quando</th><th>Attività</th><th>Contatti</th><th>Stato</th><th>Cosa ha fatto</th><th>Modifiche</th><th>Dominio scelto</th><th>Anteprima</th></tr></thead><tbody>';
     foreach (array_slice($tutte, 0, 200) as $a) {
         $d = $a['dati'] ?? [];
@@ -2862,7 +2864,7 @@ function sc_promemoria_email($c) {
     $fino = 'Resta visibile fino a ' . $scade . '.';
     $bottone = 'Guarda il tuo sito';
     $punti = ['Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa',
-              'Se vuoi cambiare qualcosa, dalla pagina chiedi fino a ' . SC_ANTEPRIMA_GIRI . ' modifiche gratis',
+              'Se vuoi cambiare qualcosa, dicci cosa: lo sistemiamo noi, gratis',
               'Se non ti piace, non paghi niente'];
     $perche = 'Ti scriviamo perché hai chiesto l\'anteprima del sito su sitocomodo.it.';
 
