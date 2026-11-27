@@ -1703,6 +1703,72 @@ function sc_anteprima_url($codice) {
     return home_url('/anteprima/' . $codice . '/');
 }
 
+// ---- 27/11/2026, richiesta di Giuseppe: cosa fa il cliente con la sua anteprima (la apre? per quanto? preme «Lo voglio»? arriva alla
+// cassa? preme «Paga»?). Sta in un'opzione a parte (sc_anteprime_tracce): i segnali arrivano spesso e non devono mai sovrascrivere
+// lo stato delle anteprime. Li manda il browser del cliente (non i robot, non l'amministratore) a /anteprima-traccia.
+function sc_tracce_leggi() {
+    $t = get_option('sc_anteprime_tracce', []);
+    return is_array($t) ? $t : [];
+}
+
+function sc_traccia_segna($codice, $evento, $extra = []) {
+    if (!sc_anteprima_codice_ok($codice) || !in_array($evento, ['attesa', 'vista', 'tempo', 'scaduta', 'voglio', 'cassa', 'paga'], true)) return false;
+    $tutte = sc_anteprime_leggi();
+    if (empty($tutte[$codice])) return false;
+    if (!get_option('sc_tracce_dal')) update_option('sc_tracce_dal', time(), false);
+    $t = array_intersect_key(sc_tracce_leggi(), $tutte);   // via le tracce delle anteprime cancellate
+    $x = isset($t[$codice]) && is_array($t[$codice]) ? $t[$codice] : [];
+    $ora = time();
+    $piu = function ($k) use (&$x) { $x[$k] = min(9999, (int) ($x[$k] ?? 0) + 1); };
+    if ($evento === 'attesa') {
+        if (empty($x['attesa'])) $x['attesa'] = $ora;
+    } elseif ($evento === 'vista') {
+        $piu('viste');
+        if (empty($x['prima'])) $x['prima'] = $ora;
+        $x['ultima'] = $ora;
+        $pag = substr(preg_replace('/[^a-z0-9\-]/', '', strtolower((string) ($extra['pagina'] ?? ''))), 0, 30) ?: 'index';
+        $pagine = isset($x['pagine']) && is_array($x['pagine']) ? $x['pagine'] : [];
+        if (isset($pagine[$pag]) || count($pagine) < 8) $pagine[$pag] = min(9999, (int) ($pagine[$pag] ?? 0) + 1);
+        $x['pagine'] = $pagine;
+    } elseif ($evento === 'tempo') {
+        $x['secondi'] = min(86400, (int) ($x['secondi'] ?? 0) + max(1, min(20, (int) ($extra['s'] ?? 0))));
+        $x['ultima'] = $ora;
+    } elseif ($evento === 'scaduta') {
+        $piu('scaduta');
+        $x['scaduta_ultima'] = $ora;
+    } else {   // voglio, cassa, paga: la prima volta e l'ultima
+        $piu($evento . '_n');
+        if (empty($x[$evento])) $x[$evento] = $ora;
+        $x[$evento . '_ultima'] = $ora;
+    }
+    $t[$codice] = $x;
+    update_option('sc_anteprime_tracce', $t, false);
+    return true;
+}
+
+// script da mettere nelle pagine nostre dell'anteprima (attesa, scaduta): manda un segnale; con $bottone anche il clic sul bottone
+function sc_traccia_js($codice, $evento, $bottone = false) {
+    if (current_user_can('manage_options')) return '';
+    return '<script>(function(){var T="/wp-json/sitocomodo/v1/anteprima-traccia",c=' . wp_json_encode($codice) . ';'
+        . 'function seg(e){try{fetch(T,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({codice:c,evento:e}),keepalive:true}).catch(function(){});}catch(_){}}'
+        . 'seg(' . wp_json_encode($evento) . ');'
+        . ($bottone ? 'var b=document.querySelector("a.bottone");if(b)b.addEventListener("click",function(){seg("voglio");});' : '')
+        . '})();</script>';
+}
+
+add_action('rest_api_init', function () {
+    register_rest_route('sitocomodo/v1', '/anteprima-traccia', [
+        'methods' => 'POST',
+        'permission_callback' => '__return_true',
+        'callback' => function (WP_REST_Request $r) {
+            $d = $r->get_json_params();
+            if (!is_array($d)) $d = json_decode((string) $r->get_body(), true);
+            if (!is_array($d)) $d = [];
+            return ['ok' => sc_traccia_segna((string) ($d['codice'] ?? ''), (string) ($d['evento'] ?? ''), $d)];
+        },
+    ]);
+});
+
 function sc_rimuovi_cartella($dir) {
     if (!is_dir($dir) || is_link($dir)) return;
     foreach (scandir($dir) as $x) {
@@ -2135,7 +2201,8 @@ function sc_anteprima_servi($codice, $resto) {
         if ($scaduta) {
             $html('Anteprima scaduta', '<h1>L\'anteprima è scaduta</h1><p>Era visibile per ' . SC_ANTEPRIMA_MINUTI . ' minuti. Il sito di ' . $nome
                 . ' però è pronto e ti aspetta: scegli il dominio e lo mettiamo online.</p><a class="bottone" href="' . esc_attr($lo_voglio) . '">Mettilo online · 99 €</a>'
-                . '<p class="piccolo" style="margin-top:16px">99 € IVA inclusa, una volta sola. Hai una domanda? Scrivici a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>.</p>');
+                . '<p class="piccolo" style="margin-top:16px">99 € IVA inclusa, una volta sola. Hai una domanda? Scrivici a <a href="mailto:info@sitocomodo.it">info@sitocomodo.it</a>.</p>'
+                . sc_traccia_js($codice, 'scaduta', true));
         }
         if ($stato === 'in coda') {
             $html('Anteprima in arrivo', '<h1>La tua anteprima arriva domani mattina</h1><p>Oggi abbiamo preparato tutte le anteprime gratis che potevamo. '
@@ -2154,7 +2221,7 @@ function sc_anteprima_servi($codice, $resto) {
             . '<p>Di solito ci vogliono pochi minuti. Resta pure qui: si apre da solo appena è pronto. Ti mandiamo il link anche per email.</p>'
             . '<ol><li>Scegliamo foto e colori</li><li>Scriviamo i testi</li><li>Lo controlliamo da telefono e da computer</li></ol>'
             . '<p class="piccolo" style="margin-top:16px">In preparazione da <span id="sc-tempo">0:00</span>. Poi lo vedi gratis per ' . SC_ANTEPRIMA_MINUTI
-            . ' minuti e paghi solo se ti piace.</p>', true, $codice);
+            . ' minuti e paghi solo se ti piace.</p>' . sc_traccia_js($codice, 'attesa'), true, $codice);
     }
     $base = realpath(sc_anteprima_cartella($codice));
     $file = $base ? realpath($base . '/' . $resto) : false;
@@ -2193,7 +2260,8 @@ function sc_anteprima_barra($a, $lo_voglio) {
     $ultima = end($a['modifiche']) ?: [];
     $dati = ['codice' => $a['codice'], 'scade' => (int) ($a['scade'] ?? 0), 'ora' => time(), 'versione' => (int) $a['versione'],
              'stato' => $a['stato'], 'giri' => max(0, SC_ANTEPRIMA_GIRI - (int) $a['giri']), 'max' => SC_ANTEPRIMA_GIRI,
-             'fatto' => (string) ($ultima['fatto'] ?? ''), 'non_fatto' => (string) ($ultima['non_fatto'] ?? ''), 'voglio' => $lo_voglio];
+             'fatto' => (string) ($ultima['fatto'] ?? ''), 'non_fatto' => (string) ($ultima['non_fatto'] ?? ''), 'voglio' => $lo_voglio,
+             'io' => current_user_can('manage_options')];
     $css = '#sc-barra{position:fixed;top:0;left:0;right:0;z-index:2147483000;display:flex;align-items:center;gap:10px;height:56px;padding:0 12px;'
         . 'background:#111827;color:#FFF;font:14px/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 2px 0 #FDE047}'
         . '#sc-barra .sc-info{flex:1 1 auto;min-width:0}#sc-barra .sc-info b{display:block;font-size:14px}'
@@ -2260,6 +2328,12 @@ function sc_anteprima_barra($a, $lo_voglio) {
         // nell'anteprima i moduli di contatto del sito non mandano niente
         . 'document.addEventListener("submit",function(e){if(e.target.closest("#sc-mod"))return;e.preventDefault();'
         . 'avviso("È un\'anteprima","Il modulo dei contatti funzionerà sul sito vero, dopo la messa online.");},true);'
+        // 27/11/2026: segnali per la bacheca (non per l'amministratore): pagina vista, tempo con la pagina sullo schermo, clic su «Lo voglio»
+        . 'if(!D.io){var T="/wp-json/sitocomodo/v1/anteprima-traccia";'
+        . 'var seg=function(e,x){try{var o=x||{};o.codice=D.codice;o.evento=e;fetch(T,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(o),keepalive:true}).catch(function(){});}catch(_){}};'
+        . 'seg("vista",{pagina:(location.pathname.split("/").pop()||"index").replace(/\\.html?$/,"")});'
+        . 'setInterval(function(){if(document.visibilityState==="visible")seg("tempo",{s:15});},15000);'
+        . 'var lv=document.querySelector("#sc-barra a.sc-voglio");if(lv)lv.addEventListener("click",function(){seg("voglio");});}'
         . '})();</script>';
     return '<style>' . $css . '</style>' . $html . $js;
 }
@@ -2269,14 +2343,59 @@ add_action('admin_menu', function () {
     add_submenu_page('sc-ordini', 'Anteprime gratis', 'Anteprime gratis', 'manage_options', 'sc-anteprime', 'sc_pagina_anteprime');
 });
 
+// «Cosa ha fatto»: le righe (già pronte per l'HTML) con quello che sappiamo di un'anteprima
+function sc_traccia_righe($a, $x, $ordini, $gettoni, $dal) {
+    $q = function ($ts) { return wp_date('d/m H:i', (int) $ts); };
+    $durata = function ($s) { $s = (int) $s; return $s < 60 ? $s . ' s' : floor($s / 60) . ' min' . ($s % 60 ? ' ' . ($s % 60) . ' s' : ''); };
+    $r = [];
+    $pronta = (int) ($a['versione'] ?? 0) > 0;
+    if (empty($x['viste']) && (int) ($a['creata'] ?? 0) < $dal) {   // nata prima che cominciassimo a registrare: non sappiamo se l'ha aperta
+        $r[] = '<span style="color:#6B7280">Aperture non registrate (anteprima di prima del ' . esc_html(wp_date('d/m', $dal)) . ')</span>';
+    } elseif (!empty($x['viste'])) {
+        $pagine = array_keys((array) ($x['pagine'] ?? []));
+        $nomi = array_map(function ($p) { return $p === 'index' ? 'home' : $p; }, $pagine);
+        $r[] = '<strong>Aperta ' . (int) $x['viste'] . ((int) $x['viste'] === 1 ? ' volta' : ' volte') . '</strong>'
+            . (!empty($x['secondi']) ? ', guardata per ' . esc_html($durata($x['secondi'])) : ', chiusa quasi subito')
+            . '<br><small>prima ' . esc_html($q($x['prima'] ?? 0)) . ' · ultima ' . esc_html($q($x['ultima'] ?? 0))
+            . ($nomi ? ' · pagine: ' . esc_html(implode(', ', $nomi)) : '') . '</small>';
+    } elseif ($pronta) {
+        $r[] = '<strong style="color:#B91C1C">Mai aperta</strong>' . (!empty($x['attesa']) ? '<br><small>era sulla pagina d\'attesa alle ' . esc_html($q($x['attesa'])) . ', poi è andato via</small>' : '');
+    } elseif (!empty($x['attesa'])) {
+        $r[] = 'Sta aspettando (dalle ' . esc_html($q($x['attesa'])) . ')';
+    }
+    if (!empty($x['scaduta'])) $r[] = 'Tornato dopo la scadenza ' . (int) $x['scaduta'] . ((int) $x['scaduta'] === 1 ? ' volta' : ' volte') . ' <small>(ultima ' . esc_html($q($x['scaduta_ultima'] ?? 0)) . ')</small>';
+    if (!empty($x['voglio'])) $r[] = 'Ha premuto «Lo voglio» <small>' . esc_html($q($x['voglio'])) . '</small>';
+    if (!empty($a['dominio_scelto'])) $r[] = 'Ha scelto il dominio' . (!empty($a['vuole_pagare']) ? ' <small>' . esc_html($q($a['vuole_pagare'])) . '</small>' : '');
+    if (!empty($x['cassa'])) $r[] = 'È arrivato alla cassa <small>' . esc_html($q($x['cassa'])) . '</small>';
+    if (!empty($x['paga'])) $r[] = '<strong>Ha premuto «Paga»</strong> (è andato su Stripe) <small>' . esc_html($q($x['paga'])) . '</small>';
+    foreach ($ordini as $o) {
+        if (($o['anteprima'] ?? '') !== ($a['codice'] ?? '')) continue;
+        $pagato = strpos((string) ($o['stato'] ?? ''), 'pagato') === 0;
+        $r[] = $pagato ? '<strong style="color:#15803D">Ha pagato</strong>' : 'Ordine: ' . esc_html((string) ($o['stato'] ?? ''));
+    }
+    if (isset($a['email_cliente'])) $r[] = '<small>Email «anteprima pronta»: ' . esc_html((string) $a['email_cliente']) . '</small>';
+    $g = !empty($a['recupero']) ? ($gettoni[$a['recupero']] ?? null) : null;
+    if (is_array($g)) {
+        $r[] = '<small>Email con lo sconto: ' . (($g['partita'] ?? '') === 'sì' ? 'inviata ' . esc_html($q($g['inviata'] ?? 0)) : 'non partita')
+            . ' · link ' . (!empty($g['aperta']) ? 'aperto ' . esc_html($q($g['aperta'])) : 'non ancora aperto') . '</small>';
+    }
+    return $r ?: ['—'];
+}
+
 function sc_pagina_anteprime() {
     if (!current_user_can('manage_options')) return;
     $tutte = sc_anteprime_leggi();
     uasort($tutte, function ($x, $y) { return ($y['creata'] ?? 0) <=> ($x['creata'] ?? 0); });
+    if (!get_option('sc_tracce_dal')) update_option('sc_tracce_dal', time(), false);
+    $dal = (int) get_option('sc_tracce_dal');
+    $tracce = sc_tracce_leggi();
+    $ordini_tutti = sc_ordini_leggi();
+    $gettoni = get_option('sc_recupero', []);
+    $gettoni = is_array($gettoni) ? $gettoni : [];
     echo '<div class="wrap"><h1>Anteprime gratis</h1><p>Chi ha chiesto di vedere il sito prima di pagare (ultimi 30 giorni). Oggi avviate: '
         . (int) sc_anteprime_avviate_oggi() . ' di ' . SC_ANTEPRIME_GIORNO . '. Restano visibili ' . SC_ANTEPRIMA_MINUTI . ' minuti per versione, '
         . SC_ANTEPRIMA_GIRI . ' modifiche gratis.</p>';
-    echo '<table class="widefat striped"><thead><tr><th>Quando</th><th>Attività</th><th>Contatti</th><th>Stato</th><th>Modifiche</th><th>Dominio scelto</th><th>Anteprima</th></tr></thead><tbody>';
+    echo '<table class="widefat striped"><thead><tr><th>Quando</th><th>Attività</th><th>Contatti</th><th>Stato</th><th>Cosa ha fatto</th><th>Modifiche</th><th>Dominio scelto</th><th>Anteprima</th></tr></thead><tbody>';
     foreach (array_slice($tutte, 0, 200) as $a) {
         $d = $a['dati'] ?? [];
         $mod = [];
@@ -2285,6 +2404,7 @@ function sc_pagina_anteprime() {
             . '<td><strong>' . esc_html($d['nome'] ?? '') . '</strong><br>' . esc_html(($d['tipo'] ?? '') . (($d['citta'] ?? '') !== '' ? ' · ' . $d['citta'] : '')) . '</td>'
             . '<td>' . esc_html($d['telefono'] ?? '') . '<br>' . esc_html($d['email'] ?? '') . '</td>'
             . '<td>' . esc_html($a['stato'] ?? '') . (!empty($a['note']) ? '<br><small>' . esc_html(mb_substr((string) $a['note'], 0, 200, 'UTF-8')) . '</small>' : '') . '</td>'
+            . '<td>' . implode('<br>', sc_traccia_righe($a, (array) ($tracce[$a['codice']] ?? []), $ordini_tutti, $gettoni, $dal)) . '</td>'
             . '<td>' . ($mod ? implode('<br>', $mod) : '—') . '</td>'
             . '<td>' . esc_html($a['dominio_scelto'] ?? '—') . '</td>'
             . '<td><a href="' . esc_url(sc_anteprima_url($a['codice'])) . '" target="_blank" rel="noopener">apri</a></td></tr>';
