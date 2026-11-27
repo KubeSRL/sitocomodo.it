@@ -2470,6 +2470,8 @@ function sc_recupero_email($c) {
     $titolo = 'Il sito di ' . $nome . ' ti aspetta';
     if ($dominio !== '') {
         $apertura = 'Hai scelto ' . $dominio . ', ma il pagamento non è arrivato in fondo. Il tuo ordine è ancora salvato, con i dati che ci hai dato.';
+    } elseif (!empty($c['anteprima']) && !empty($c['mai_vista'])) {
+        $apertura = 'L\'anteprima è pronta, ma non l\'hai ancora guardata. Il sito c\'è e lo teniamo da parte per te.';
     } elseif (!empty($c['anteprima'])) {
         $apertura = 'Hai visto l\'anteprima, ma non l\'hai ancora messa online. Il sito è pronto e lo teniamo da parte per te.';
     } else {
@@ -2633,6 +2635,10 @@ function sc_recupero_giro($prova = false) {
         $c = ['nome' => $d['nome'] ?? '', 'rifai' => $rifai, 'scade' => $scade,
               'dominio' => $x['tipo'] === 'ordine' ? (string) ($d['dominio'] ?? '') : '',
               'anteprima' => $x['tipo'] === 'anteprima',
+              // «non l'hai ancora guardata» solo quando lo sappiamo davvero (promemoria accesi, anteprima nata dopo l'inizio della registrazione)
+              'mai_vista' => $x['tipo'] === 'anteprima' && get_option('sc_promemoria_attivo', '') === '1'
+                  && (int) ($tutte[$x['codice']]['creata'] ?? 0) >= (int) get_option('sc_tracce_dal', PHP_INT_MAX)
+                  && empty(sc_tracce_leggi()[$x['codice']]['viste']),
               'link' => home_url('/riprendi/' . $tok . '/'), 'link_vedi' => home_url('/riprendi/' . $tok . '/?vedi=1'),
               'link_no' => home_url('/niente-email/' . $tok . '/')];
         $ok = sc_recupero_manda($d['email'], $c);
@@ -2667,6 +2673,11 @@ add_action('template_redirect', function () {
     header('X-Robots-Tag: noindex, nofollow');
     $gettoni = get_option('sc_recupero', []);
     $g = is_array($gettoni) ? ($gettoni[$m[2]] ?? null) : null;
+    if (!$g && $m[1] === 'niente-email') {   // 27/11/2026: il link dei promemoria dell'anteprima
+        foreach (sc_promemoria_leggi() as $x) {
+            if (!empty($x['tok']) && hash_equals((string) $x['tok'], $m[2])) { $g = ['email' => (string) ($x['email'] ?? '')]; break; }
+        }
+    }
     $pagina = function ($titolo, $corpo) {
         status_header(200);
         header('Content-Type: text/html; charset=utf-8');
@@ -2776,3 +2787,214 @@ function sc_anteprima_prezzo($a) {
     if (is_array($g) && !empty($g['aperta']) && time() < (int) ($g['scade'] ?? 0)) return sc_euro(sc_recupero_prezzi(false)[1]);
     return '99 €';
 }
+
+// ---------------------------------------------------------------- 8. Promemoria a chi non ha ancora aperto l'anteprima
+// 27/11/2026, richiesta di Giuseppe. Spento finché sc_promemoria_attivo non vale '1' (lo accende /promemoria-stato).
+// Chi ha un'anteprima pronta e non l'ha mai aperta (lo dice sc_anteprime_tracce) riceve fino a SC_PROMEMORIA_MAX email,
+// a orari diversi: la prima un'ora dopo che è pronta, le altre al primo orario tra 8:30, 13:00 e 20:30 che cade almeno
+// 3 ore dopo la precedente. Mai di notte, mai dopo la scadenza, mai più dopo che l'ha aperta o ha scelto il dominio.
+// In fondo a ogni email c'è «Non scrivermi più» (/niente-email/<token>/). Riguarda solo le anteprime nate dopo l'accensione.
+if (!defined('SC_PROMEMORIA_MAX')) define('SC_PROMEMORIA_MAX', 3);
+
+function sc_promemoria_leggi() {
+    $p = get_option('sc_promemoria', []);
+    return is_array($p) ? $p : [];
+}
+
+// minuti dalla mezzanotte, nell'ora di WordPress (Europe/Rome)
+function sc_minuti_del_giorno($ts) {
+    return (int) wp_date('G', $ts) * 60 + (int) wp_date('i', $ts);
+}
+
+// si scrive ai clienti solo tra le 8:00 e le 21:30
+function sc_promemoria_in_fascia($ts) {
+    $m = sc_minuti_del_giorno($ts);
+    return $m >= 480 && $m <= 1290;
+}
+
+// il primo orario tra 8:30, 13:00 e 20:30 da $ts in poi
+function sc_promemoria_orario_dopo($ts) {
+    $giorno = new DateTime('@' . (int) $ts);
+    $giorno->setTimezone(wp_timezone());
+    for ($g = 0; $g < 3; $g++) {
+        foreach ([[8, 30], [13, 0], [20, 30]] as $o) {
+            $x = clone $giorno;
+            if ($g) $x->modify('+' . $g . ' day');
+            $x->setTime($o[0], $o[1], 0);
+            if ($x->getTimestamp() >= $ts) return $x->getTimestamp();
+        }
+    }
+    return 0;
+}
+
+// quando tocca la prossima email (timestamp); 0 se non ne toccano più. $inviati: i momenti delle email già partite
+function sc_promemoria_prossima($pronta, $scade, $inviati) {
+    $n = count($inviati);
+    if ($n >= SC_PROMEMORIA_MAX) return 0;
+    if ($n === 0) {
+        $t = $pronta + HOUR_IN_SECONDS;
+        if (!sc_promemoria_in_fascia($t)) $t = sc_promemoria_orario_dopo($t);
+    } else {
+        $t = sc_promemoria_orario_dopo(max($inviati) + 3 * HOUR_IN_SECONDS);
+    }
+    return ($t && $t < $scade - 30 * MINUTE_IN_SECONDS) ? $t : 0;
+}
+
+// $c: nome, numero (1, 2, 3…), ultimo (bool: è l'ultima utile prima della scadenza), link, link_no, scade (timestamp)
+function sc_promemoria_email($c) {
+    $nome = trim((string) ($c['nome'] ?? '')) ?: 'la tua attività';
+    $scade = sc_quando_it((int) $c['scade']);
+    $e = function ($s) { return esc_html($s); };
+    $u = function ($s) { return esc_url($s); };
+    if (!empty($c['ultimo'])) {
+        $oggetto = 'Ultime ore per vedere il sito di ' . $nome;
+        $titolo = 'Ultime ore per vedere il tuo sito';
+        $apertura = 'L\'anteprima del sito di ' . $nome . ' è pronta, ma tra poco non si vede più. Aprila adesso: basta un minuto, dal telefono.';
+    } elseif ((int) ($c['numero'] ?? 1) > 1) {
+        $oggetto = 'Hai visto il sito di ' . $nome . '?';
+        $titolo = 'Il sito di ' . $nome . ' ti aspetta';
+        $apertura = 'È ancora lì, pronto da guardare. Aprilo quando hai un minuto: vederlo non costa niente.';
+    } else {
+        $oggetto = 'Il sito di ' . $nome . ' è pronto: guardalo';
+        $titolo = 'Il sito di ' . $nome . ' è pronto';
+        $apertura = 'L\'abbiamo preparato con i dati che ci hai dato, ma non l\'hai ancora aperto. Lo guardi gratis, dal telefono, in un minuto.';
+    }
+    $fino = 'Resta visibile fino a ' . $scade . '.';
+    $bottone = 'Guarda il tuo sito';
+    $punti = ['Se ti piace, scegli il dominio e lo mettiamo online a 99 € IVA inclusa',
+              'Se vuoi cambiare qualcosa, dalla pagina chiedi fino a ' . SC_ANTEPRIMA_GIRI . ' modifiche gratis',
+              'Se non ti piace, non paghi niente'];
+    $perche = 'Ti scriviamo perché hai chiesto l\'anteprima del sito su sitocomodo.it.';
+
+    $f_titoli = "'Space Grotesk',Arial,Helvetica,sans-serif";
+    $f_testo = "Inter,Helvetica,Arial,sans-serif";
+    $lista = '';
+    foreach ($punti as $p) {
+        $lista .= '<tr><td width="28" valign="top" style="padding:4px 0;font:700 16px/24px ' . $f_testo . ';color:#C2410C">✓</td>'
+                . '<td style="padding:4px 0;font:400 16px/24px ' . $f_testo . ';color:#374151">' . $e($p) . '</td></tr>';
+    }
+    $html = '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<meta name="color-scheme" content="light only"><title>' . $e($oggetto) . '</title></head>'
+        . '<body style="margin:0;padding:0;background:#EEF4FF">'
+        . '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' . $e($fino . ' Guardarlo è gratis.') . '</div>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF4FF"><tr><td align="center" style="padding:28px 14px 40px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">'
+        . '<tr><td style="padding:0 6px 18px"><a href="https://sitocomodo.it/" style="text-decoration:none">'
+        . '<img src="https://sitocomodo.it/marchio/sitocomodo-logo.png" width="190" height="36" alt="SitoComodo" style="display:block;border:0;width:190px;height:auto"></a></td></tr>'
+        . '<tr><td style="background:#FFFFFF;border:2px solid #111827;border-radius:24px;box-shadow:6px 6px 0 #111827;padding:30px 24px 28px">'
+        . '<h1 style="margin:0 0 12px;font:700 30px/36px ' . $f_titoli . ';letter-spacing:-0.01em;color:#111827">' . $e($titolo) . '</h1>'
+        . '<p style="margin:0 0 12px;font:400 17px/26px ' . $f_testo . ';color:#374151">' . $e($apertura) . '</p>'
+        . '<p style="margin:0 0 4px;font:600 17px/26px ' . $f_testo . ';color:#111827">' . $e($fino) . '</p>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px"><tr>'
+        . '<td align="center" style="background:#1D4ED8;border:2px solid #111827;border-radius:16px;box-shadow:4px 4px 0 #111827">'
+        . '<a href="' . $u($c['link']) . '" style="display:block;padding:17px 14px;font:600 18px/22px ' . $f_testo . ';color:#FFFFFF;text-decoration:none">' . $e($bottone) . '</a>'
+        . '</td></tr></table>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #D1D5DB"><tr><td style="padding-top:16px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0">' . $lista . '</table></td></tr></table>'
+        . '<p style="margin:20px 0 0;font:400 16px/24px ' . $f_testo . ';color:#374151">Hai un dubbio? Rispondi a questa email.</p>'
+        . '<p style="margin:14px 0 0;font:700 17px/24px ' . $f_titoli . ';color:#111827">Team SitoComodo</p>'
+        . '</td></tr>'
+        . '<tr><td style="padding:22px 8px 0;font:400 13px/19px ' . $f_testo . ';color:#4B5563">'
+        . $e($perche) . ' <a href="' . $u($c['link_no']) . '" style="color:#4B5563">Non scrivermi più</a>'
+        . '<br><br>SitoComodo · <a href="mailto:info@sitocomodo.it" style="color:#4B5563">info@sitocomodo.it</a> · P.IVA 05299170752 · '
+        . '<a href="https://sitocomodo.it/privacy/" style="color:#4B5563">Privacy</a></td></tr>'
+        . '</table></td></tr></table></body></html>';
+
+    $testo = implode("\n", array_merge(
+        [$titolo, '', $apertura, $fino, '', $bottone . ':', $c['link'], ''],
+        array_map(function ($p) { return '- ' . $p; }, $punti),
+        ['', 'Hai un dubbio? Rispondi a questa email.', '', 'Team SitoComodo', '',
+         $perche . ' Non vuoi altre email: ' . $c['link_no'], 'SitoComodo · info@sitocomodo.it · P.IVA 05299170752']));
+    return [$oggetto, $html, $testo];
+}
+
+function sc_promemoria_manda($a, $c) {
+    [$oggetto, $html, $testo] = sc_promemoria_email($c);
+    $alt = function ($m) use ($testo) { $m->AltBody = $testo; };
+    add_action('phpmailer_init', $alt);
+    $ok = wp_mail($a, $oggetto, $html, ['Content-Type: text/html; charset=UTF-8', 'Reply-To: ' . SC_DESTINATARIO]);
+    remove_action('phpmailer_init', $alt);
+    return $ok;
+}
+
+add_filter('cron_schedules', function ($s) {
+    $s['sc_mezzora'] = ['interval' => 30 * MINUTE_IN_SECONDS, 'display' => 'Ogni mezz\'ora (SitoComodo)'];
+    return $s;
+});
+
+add_action('init', function () {
+    if (get_option('sc_promemoria_attivo', '') === '1' && !wp_next_scheduled('sc_promemoria_giro')) {
+        wp_schedule_event(time() + 120, 'sc_mezzora', 'sc_promemoria_giro');
+    }
+});
+
+add_action('sc_promemoria_giro', 'sc_promemoria_giro');
+function sc_promemoria_giro($prova = false) {
+    if (!$prova && get_option('sc_promemoria_attivo', '') !== '1') return ['spento' => true];
+    $ora = time();
+    $dal = max((int) get_option('sc_promemoria_dal', 0), (int) get_option('sc_tracce_dal', 0));
+    if (!$prova && (!(int) get_option('sc_promemoria_dal', 0) || !(int) get_option('sc_tracce_dal', 0))) return ['mandate' => 0];
+    $tutte = sc_anteprime_leggi();
+    $tracce = sc_tracce_leggi();
+    $p = array_intersect_key(sc_promemoria_leggi(), $tutte);
+    $no = get_option('sc_no_email', []);
+    $no = is_array($no) ? $no : [];
+    $durata = SC_ANTEPRIMA_MINUTI * MINUTE_IN_SECONDS;
+    $elenco = [];
+    $fatte = 0;
+    foreach ($tutte as $codice => $a) {
+        $d = $a['dati'] ?? [];
+        if (($a['stato'] ?? '') !== 'pronta' || (int) ($a['versione'] ?? 0) < 1 || !empty($a['vuole_pagare'])) continue;
+        $scade = (int) ($a['scade'] ?? 0);
+        if ($scade <= $ora || (int) ($a['creata'] ?? 0) <= $dal) continue;
+        if (!empty($tracce[$codice]['viste'])) continue;   // l'ha aperta: non serve più
+        if (!sc_recupero_sembra_vero($d) || isset($no[sc_recupero_chiave_email($d['email'])])) continue;
+        $inviati = array_values(array_map('intval', (array) ($p[$codice]['inviati'] ?? [])));
+        $quando = sc_promemoria_prossima($scade - $durata, $scade, $inviati);
+        if (!$quando) continue;
+        $numero = count($inviati) + 1;
+        $elenco[] = ($d['nome'] ?? '') . ': email ' . $numero . ' ' . wp_date('d/m H:i', $quando);
+        if ($prova || $quando > $ora || !sc_promemoria_in_fascia($ora)) continue;
+        if (empty($p[$codice]['tok'])) $p[$codice] = ['tok' => bin2hex(random_bytes(10)), 'email' => $d['email'], 'nome' => $d['nome'] ?? '', 'inviati' => []];
+        $dopo = sc_promemoria_prossima($scade - $durata, $scade, array_merge($inviati, [$ora]));
+        $ok = sc_promemoria_manda($d['email'], ['nome' => $d['nome'] ?? '', 'numero' => $numero, 'ultimo' => $numero > 1 && !$dopo, 'scade' => $scade,
+            'link' => sc_anteprima_url($codice), 'link_no' => home_url('/niente-email/' . $p[$codice]['tok'] . '/')]);
+        $p[$codice]['inviati'][] = $ora;   // anche se non è partita: non si riprova all'infinito
+        $p[$codice]['partite'][] = $ok ? 'sì' : 'no';
+        if ($ok) $fatte++;
+    }
+    if ($prova) return ['in_programma' => $elenco];
+    update_option('sc_promemoria', $p, false);
+    return ['mandate' => $fatte];
+}
+
+// solo per l'amministratore: accende/spegne, dice cosa partirebbe, manda una prova a info@
+add_action('rest_api_init', function () {
+    register_rest_route('sitocomodo/v1', '/promemoria-stato', [
+        'methods' => ['GET', 'POST'],
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function (WP_REST_Request $r) {
+            if ($r->get_method() === 'POST') {
+                $acceso = (bool) $r->get_param('attivo');
+                if ($acceso && get_option('sc_promemoria_attivo', '') !== '1') update_option('sc_promemoria_dal', time(), false);
+                update_option('sc_promemoria_attivo', $acceso ? '1' : '', false);
+                if (!$acceso) wp_clear_scheduled_hook('sc_promemoria_giro');
+            }
+            $inviate = [];
+            foreach (sc_promemoria_leggi() as $x) {
+                foreach ((array) ($x['inviati'] ?? []) as $k => $t) $inviate[] = ($x['nome'] ?? '') . ' ' . wp_date('d/m H:i', (int) $t) . ' partita ' . ($x['partite'][$k] ?? '');
+            }
+            return ['attivo' => get_option('sc_promemoria_attivo', '') === '1', 'dal' => (int) get_option('sc_promemoria_dal', 0),
+                    'prossimo_giro' => wp_next_scheduled('sc_promemoria_giro'), 'a_vuoto' => sc_promemoria_giro(true), 'inviate' => $inviate];
+        },
+    ]);
+    register_rest_route('sitocomodo/v1', '/promemoria-prova', [
+        'methods' => 'POST',
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function (WP_REST_Request $r) {
+            $n = max(1, min(SC_PROMEMORIA_MAX, (int) $r->get_param('numero')));
+            return ['ok' => sc_promemoria_manda(SC_DESTINATARIO, ['nome' => 'Pizzeria da Mario', 'numero' => $n, 'ultimo' => $n === SC_PROMEMORIA_MAX,
+                'scade' => time() + 20 * HOUR_IN_SECONDS, 'link' => home_url('/'), 'link_no' => home_url('/')])];
+        },
+    ]);
+});
