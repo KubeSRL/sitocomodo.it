@@ -1874,6 +1874,7 @@ function sc_anteprima_payload($a, $richiesta = '') {
     foreach (['piva', 'ragione', 'citta_intestatario', 'provincia_intestatario', 'dominio_acquisto', 'hosting_attuale', 'fatto_con', 'dns_rilevati'] as $k) {
         $p[$k] = '';
     }
+    $p['modello_ai'] = (string) ($a['modello_ai'] ?? '');   // solo per le copie di prova: quale modello la costruisce
     $p['file'] = [];
     if ($richiesta === '') {
         foreach (($d['file'] ?? []) as $f) {
@@ -1942,6 +1943,7 @@ function sc_anteprima_avvisa_giuseppe($a, $oggetto, $righe_extra = []) {
 }
 
 function sc_anteprima_email_cliente($a, $modifica) {
+    if (!empty($a['prova_di'])) return 'copia di prova: nessuna email al cliente';
     if (get_option('sc_email_cliente', '') !== '1') return 'email ai clienti spente';
     $d = $a['dati'] ?? [];
     if (!is_email($d['email'] ?? '')) return 'email non valida';
@@ -1992,6 +1994,37 @@ add_action('rest_api_init', function () {
             return ['ok' => true, 'stato' => $a['stato'], 'versione' => (int) $a['versione'], 'scade' => (int) ($a['scade'] ?? 0), 'ora' => time(),
                     'giri_rimasti' => max(0, SC_ANTEPRIMA_GIRI - (int) $a['giri']),
                     'fatto' => $ultima['fatto'] ?? '', 'non_fatto' => $ultima['non_fatto'] ?? ''];
+        },
+    ]);
+
+    // 27/11/2026, richiesta di Giuseppe («rifai prima i siti, poi me li fai vedere, poi se sono belli li mandiamo»):
+    // l'amministratore fa rifare un'anteprima con gli stessi dati e le stesse foto del cliente, SENZA toccare quella che il
+    // cliente ha in mano e senza scrivergli. Nasce una copia di prova con un codice nuovo (prova_di = codice del cliente):
+    // nessuna email al cliente, niente promemoria, niente sconto, da lì non si compra. Con solo_dati=1 risponde solo con
+    // quello che il cliente ha scritto nel modulo, senza costruire niente.
+    register_rest_route('sitocomodo/v1', '/anteprima-rifai', [
+        'methods' => 'POST',
+        'permission_callback' => function () { return current_user_can('manage_options'); },
+        'callback' => function (WP_REST_Request $r) {
+            $c = (string) $r->get_param('codice');
+            $tutte = sc_anteprime_leggi();
+            if (!sc_anteprima_codice_ok($c) || empty($tutte[$c])) return new WP_REST_Response(['errore' => 'anteprima sconosciuta'], 404);
+            $d = (array) ($tutte[$c]['dati'] ?? []);
+            if ((string) $r->get_param('solo_dati') === '1') {
+                return ['ok' => true, 'dati' => $d, 'stato' => $tutte[$c]['stato'] ?? '', 'versione' => (int) ($tutte[$c]['versione'] ?? 0),
+                        'scade' => (int) ($tutte[$c]['scade'] ?? 0), 'prova_di' => (string) ($tutte[$c]['prova_di'] ?? '')];
+            }
+            $modello = (string) $r->get_param('modello_ai');
+            if (!in_array($modello, ['claude-sonnet-5-5', 'claude-opus-5-5'], true)) $modello = '';
+            $nuovo = bin2hex(random_bytes(10));
+            $tutte[$nuovo] = ['codice' => $nuovo, 'creata' => time(), 'ip' => '', 'stato' => 'in preparazione', 'versione' => 0,
+                              'giri' => 0, 'modifiche' => [], 'dati' => $d,
+                              'prova_di' => (string) ($tutte[$c]['prova_di'] ?? '') ?: $c, 'modello_ai' => $modello];
+            sc_anteprime_scrivi($tutte);
+            sc_anteprima_avvia($nuovo);
+            $a = sc_anteprime_leggi()[$nuovo] ?? [];
+            return ['ok' => true, 'codice' => $nuovo, 'url' => sc_anteprima_url($nuovo), 'stato' => (string) ($a['stato'] ?? ''),
+                    'note' => (string) ($a['note'] ?? ''), 'modello_ai' => $modello];
         },
     ]);
 
@@ -2122,6 +2155,7 @@ add_action('rest_api_init', function () {
             $tutte = sc_anteprime_leggi();
             if (!sc_anteprima_codice_ok($c) || empty($tutte[$c])) return new WP_REST_Response(['ok' => false, 'errore' => 'Anteprima non trovata.'], 404);
             $a = $tutte[$c];
+            if (!empty($a['prova_di'])) return new WP_REST_Response(['ok' => false, 'errore' => 'Questa è una copia di prova: da qui non si compra.'], 409);
             if ((int) ($a['versione'] ?? 0) < 1) return new WP_REST_Response(['ok' => false, 'errore' => 'L\'anteprima non è ancora pronta.'], 409);
             $dominio = strtolower(preg_replace('/[^a-zA-Z0-9.\-]/', '', (string) ($d['dominio'] ?? '')));
             if (!preg_match('/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.(it|com|eu|net|org|info|online|shop|store|studio|me)$/', $dominio)) {
@@ -2414,7 +2448,8 @@ function sc_pagina_anteprime() {
         $mod = [];
         foreach (($a['modifiche'] ?? []) as $m) $mod[] = esc_html(mb_substr((string) ($m['testo'] ?? ''), 0, 120, 'UTF-8'));
         echo '<tr><td>' . esc_html(wp_date('d/m H:i', (int) ($a['creata'] ?? 0))) . '</td>'
-            . '<td><strong>' . esc_html($d['nome'] ?? '') . '</strong><br>' . esc_html(($d['tipo'] ?? '') . (($d['citta'] ?? '') !== '' ? ' · ' . $d['citta'] : '')) . '</td>'
+            . '<td><strong>' . esc_html($d['nome'] ?? '') . '</strong><br>' . esc_html(($d['tipo'] ?? '') . (($d['citta'] ?? '') !== '' ? ' · ' . $d['citta'] : ''))
+            . (!empty($a['prova_di']) ? '<br><em>Copia di prova rifatta da noi: il cliente non la vede e non riceve email</em>' : '') . '</td>'
             . '<td>' . esc_html($d['telefono'] ?? '') . '<br>' . esc_html($d['email'] ?? '') . '</td>'
             . '<td>' . esc_html($a['stato'] ?? '') . (!empty($a['note']) ? '<br><small>' . esc_html(mb_substr((string) $a['note'], 0, 200, 'UTF-8')) . '</small>' : '') . '</td>'
             . '<td>' . implode('<br>', sc_traccia_righe($a, (array) ($tracce[$a['codice']] ?? []), $ordini_tutti, $gettoni, $dal)) . '</td>'
@@ -2615,7 +2650,7 @@ function sc_recupero_giro($prova = false) {
     }
     foreach ($tutte as $codice => $a) {   // poi le anteprime pronte, scadute e mai arrivate al dominio
         $d = $a['dati'] ?? [];
-        if (!empty($a['recupero']) || !empty($a['vuole_pagare']) || (int) ($a['versione'] ?? 0) < 1) continue;
+        if (!empty($a['recupero']) || !empty($a['vuole_pagare']) || (int) ($a['versione'] ?? 0) < 1 || !empty($a['prova_di'])) continue;
         if (!in_array($a['stato'] ?? '', ['pronta', 'in modifica'], true) || (int) ($a['scade'] ?? 0) > $ora) continue;
         $t = (int) ($a['creata'] ?? 0);
         if ($t <= $dal || $t > $ora - $attesa || $t < $ora - $giorni3) continue;
@@ -2946,7 +2981,7 @@ function sc_promemoria_giro($prova = false) {
     $fatte = 0;
     foreach ($tutte as $codice => $a) {
         $d = $a['dati'] ?? [];
-        if (($a['stato'] ?? '') !== 'pronta' || (int) ($a['versione'] ?? 0) < 1 || !empty($a['vuole_pagare'])) continue;
+        if (($a['stato'] ?? '') !== 'pronta' || (int) ($a['versione'] ?? 0) < 1 || !empty($a['vuole_pagare']) || !empty($a['prova_di'])) continue;
         $scade = (int) ($a['scade'] ?? 0);
         if ($scade <= $ora || (int) ($a['creata'] ?? 0) <= $dal) continue;
         if (!empty($tracce[$codice]['viste'])) continue;   // l'ha aperta: non serve più
